@@ -2,7 +2,7 @@
 #!desc=Enhancements for YouTube and YouTube Music
 #!author=kewachan
 #!system=iOS,iPadOS,tvOS,macOS
-#!loon_version=3.5.1(983)
+#!loon_version=3.5.0(975)
 
 [Argument]
 blockUpload = switch,true,tag=Block Upload Button
