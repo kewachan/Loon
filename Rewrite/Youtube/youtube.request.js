@@ -1,12 +1,13 @@
 // Loon-specific YouTube request handler.
-// Hands initplayback to the Worker through Loon's native request rewrite so
-// the response can flow directly to YouTube without script-side buffering.
+// Uses a dedicated DIRECT HTTP/2 request because a native cross-host rewrite
+// can reset Loon's binary response stream before initplayback completes.
 
 (function () {
   "use strict";
 
   const CONFIG_KEY = "YouTubeConfig";
   const WORKER_URL = "https://youtube-init.hmtw47cv7m.workers.dev/";
+  const WORKER_TIMEOUT_MS = 25000;
   const HOT_HASH_HEADER = "x-youtube-hot-hash-data";
 
   function finish(value) {
@@ -199,7 +200,32 @@
       ["host", ":authority", "content-length", "connection", "proxy-connection", "transfer-encoding", "te"]
     );
 
-    finish({ url: workerUrl, headers: requestHeaders, body });
+    $httpClient.post(
+      {
+        url: workerUrl,
+        headers: requestHeaders,
+        body,
+        node: "DIRECT",
+        alpn: "h2",
+        timeout: WORKER_TIMEOUT_MS,
+        "binary-mode": true,
+        "auto-redirect": false,
+      },
+      function (error, response, data) {
+        if (error || !response) {
+          console.log(`YouTube Worker request failed: ${String(error || "missing response")}`);
+          finish({});
+          return;
+        }
+
+        const status = Number(response.status || response.statusCode || 200);
+        const responseHeaders = deleteHeaders(
+          { ...(response.headers || {}) },
+          ["content-length", "connection", "proxy-connection", "transfer-encoding"]
+        );
+        finish({ response: { status, headers: responseHeaders, body: data } });
+      }
+    );
   }
 
   try {

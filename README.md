@@ -20,17 +20,18 @@
 ### Core Logic
 
 - Response scripts cache the current YouTube playback encryption keys.
-- Eligible `initplayback` POST requests are handed directly to the Worker with their binary body.
-- The Worker removes encrypted playback advertisements and returns the response to YouTube.
+- Eligible `initplayback` POST requests are sent to the Worker over a dedicated DIRECT HTTP/2 connection.
+- The Worker removes encrypted playback advertisements before Loon returns a sanitized response to YouTube.
 
 ### Important Decisions
 
-- Loon uses a native request rewrite instead of `$httpClient` to avoid buffering the complete playback response in a script callback.
+- Loon keeps `$httpClient` because native cross-host rewrites can reset large binary playback responses.
+- Worker requests use DIRECT and HTTP/2 to reduce the callback buffering delay.
 - The Worker implementation and deployment remain shared with the Surge project.
 
 ### Recent Significant Changes
 
-- `2026-09-10` — Replaced the buffered Loon Worker request with a native request handoff.
+- `2026-09-11` — Restored the buffered Worker request with DIRECT HTTP/2 after native handoff caused stream resets.
 
 ### Start Here
 
