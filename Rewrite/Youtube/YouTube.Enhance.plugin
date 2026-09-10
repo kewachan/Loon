@@ -11,6 +11,10 @@ blockShorts = switch,false,tag=Block Shorts Button
 captionLang = input,"off",tag=Caption Translation Language
 debug = switch,false,tag=Enable Debug Mode
 
+[Rule]
+AND,((PROTOCOL,QUIC),(DOMAIN-SUFFIX,googlevideo.com)),REJECT
+AND,((PROTOCOL,QUIC),(DOMAIN,youtubei.googleapis.com)),REJECT
+
 [Script]
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.response.js,tag=youtube.response,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang},{blockUpload},{blockImmersive},{blockShorts},{debug}]
 http-request ^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.* script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js,tag=youtube.request.init,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang}]
