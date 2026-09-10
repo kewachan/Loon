@@ -1,6 +1,6 @@
 // Loon-specific YouTube request handler.
-// Uses a fresh binary POST for initplayback because rewriting only the URL can
-// leave Loon on the original googlevideo connection.
+// Hands initplayback to the Worker through Loon's native request rewrite so
+// the response can flow directly to YouTube without script-side buffering.
 
 (function () {
   "use strict";
@@ -199,29 +199,7 @@
       ["host", ":authority", "content-length", "connection", "proxy-connection", "transfer-encoding", "te"]
     );
 
-    $httpClient.post(
-      {
-        url: workerUrl,
-        headers: requestHeaders,
-        body,
-        "binary-mode": true,
-        "auto-redirect": false,
-      },
-      function (error, response, data) {
-        if (error || !response) {
-          console.log(`YouTube Worker request failed: ${String(error || "missing response")}`);
-          finish({});
-          return;
-        }
-
-        const status = Number(response.status || response.statusCode || 200);
-        const responseHeaders = deleteHeaders(
-          { ...(response.headers || {}) },
-          ["content-length", "connection", "proxy-connection", "transfer-encoding"]
-        );
-        finish({ response: { status, headers: responseHeaders, body: data } });
-      }
-    );
+    finish({ url: workerUrl, headers: requestHeaders, body });
   }
 
   try {
