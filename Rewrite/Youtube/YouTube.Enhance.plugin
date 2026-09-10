@@ -1,0 +1,22 @@
+#!name=Youtube Enhance
+#!desc=Enhancements for YouTube and YouTube Music
+#!author=kewachan
+#!system=iOS,iPadOS,tvOS,macOS
+#!loon_version=3.5.1(983)
+
+[Argument]
+blockUpload = switch,true,tag=Block Upload Button
+blockImmersive = switch,true,tag=Block Immersive Button
+blockShorts = switch,false,tag=Block Shorts Button
+captionLang = input,"off",tag=Caption Translation Language
+debug = switch,false,tag=Enable Debug Mode
+
+[Script]
+response if ${url} ~= /^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$/i then script("https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.response.js", {${captionLang}, ${blockUpload}, ${blockImmersive}, ${blockShorts}, ${debug}}) with tag="YouTube Response", timeout=30, requires_body=true, binary_body_mode=true
+request if ${url} ~= /^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*/i then script("https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js", {${captionLang}}) with tag="YouTube Init Playback", timeout=30, requires_body=true, binary_body_mode=true
+request if ${url} ~= /^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event/i then script("https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js") with tag="YouTube Log Event", timeout=20, requires_body=true, binary_body_mode=true
+request if ${url} ~= /^https:\/\/www\.youtube\.com\/api\/timedtext\?(?:[^&]*&)*tlang=[^&]+(?:&|$)/i then script("https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.caption.js") with tag="YouTube Caption Request", timeout=10
+response if ${url} ~= /^https:\/\/www\.youtube\.com\/api\/timedtext\?(?:[^&]*&)*(?:enhance_)?tlang=[^&]+(?:&|$)/i then script("https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.caption.js") with tag="YouTube Caption Response", timeout=30, requires_body=true
+
+[Mitm]
+hostname = *.googlevideo.com, youtubei.googleapis.com, www.youtube.com
