@@ -1,5 +1,5 @@
 // Loon-specific YouTube request handler.
-// Uses a dedicated DIRECT HTTP/2 request because a native cross-host rewrite
+// Uses a dedicated binary HTTP/2 request because a native cross-host rewrite
 // can reset Loon's binary response stream before initplayback completes.
 
 (function () {
@@ -205,7 +205,6 @@
         url: workerUrl,
         headers: requestHeaders,
         body,
-        node: "DIRECT",
         alpn: "h2",
         timeout: WORKER_TIMEOUT_MS,
         "binary-mode": true,

@@ -20,18 +20,19 @@
 ### Core Logic
 
 - Response scripts cache the current YouTube playback encryption keys.
-- Eligible `initplayback` POST requests are sent to the Worker over a dedicated DIRECT HTTP/2 connection.
+- Eligible `initplayback` POST requests are sent to the Worker over a dedicated binary HTTP/2 connection that follows the active routing policy.
 - The Worker removes encrypted playback advertisements before Loon returns a sanitized response to YouTube.
 
 ### Important Decisions
 
 - Loon keeps `$httpClient` because native cross-host rewrites can reset large binary playback responses.
-- Worker requests use DIRECT and HTTP/2 to reduce the callback buffering delay.
+- Worker requests retain the current YouTube route because Music playback responses can be bound to the original proxy egress.
+- HTTP/2 remains enabled to reduce callback buffering delay.
 - The Worker implementation and deployment remain shared with the Surge project.
 
 ### Recent Significant Changes
 
-- `2026-09-11` — Restored the buffered Worker request with DIRECT HTTP/2 after native handoff caused stream resets.
+- `2026-09-11` — Kept buffered HTTP/2 Worker requests but removed forced DIRECT routing to preserve YouTube Music playback.
 
 ### Start Here
 
