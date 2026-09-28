@@ -15,11 +15,13 @@
 - `Rewrite/Youtube/YouTube.Enhance.plugin` — Loon plugin configuration.
 - `Rewrite/Youtube/youtube.request.js` — playback request handoff and key handling.
 - `Rewrite/Youtube/youtube.response.js` — protobuf response filtering and enhancements.
+- `Rewrite/Youtube/youtube.navigation.response.js` — external-link playback advertisement cleanup.
 - `Rewrite/Youtube/youtube.caption.js` — caption translation handling.
 
 ### Core Logic
 
 - Response scripts cache the current YouTube playback encryption keys.
+- External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Eligible `initplayback` POST requests are sent to the Worker over a dedicated binary HTTP/2 connection that follows the active routing policy.
 - The Worker removes encrypted playback advertisements before Loon returns a sanitized response to YouTube.
 
@@ -32,10 +34,12 @@
 
 ### Recent Significant Changes
 
+- `2026-09-28` — Added local cleanup for advertisements embedded when external links open in YouTube.
 - `2026-09-11` — Kept buffered HTTP/2 Worker requests but removed forced DIRECT routing to preserve YouTube Music playback.
 
 ### Start Here
 
 - `Rewrite/Youtube/YouTube.Enhance.plugin`
+- `Rewrite/Youtube/youtube.navigation.response.js`
 - `Rewrite/Youtube/youtube.request.js`
 - `Rewrite/Youtube/youtube.response.js`
