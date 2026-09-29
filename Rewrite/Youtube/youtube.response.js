@@ -26,7 +26,7 @@
 }catch(error){console.log(`YouTube shopping shelf patch: ${error}`)}})();
 // Remove Sponsored cards from the post-play More videos carousel. Direct
 // get_watch and next responses use the same 29209665 container as encrypted
-// initplayback responses, but they do not pass through the Worker. Delete only
+// initplayback responses handled by the local transformer. Delete only
 // field 2 items carrying generic YouTube ad signals; advertiser text and
 // localized Sponsored labels are intentionally not used for classification.
 (()=>{try{

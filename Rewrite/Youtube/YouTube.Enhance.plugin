@@ -2,7 +2,7 @@
 #!desc=Enhancements for YouTube and YouTube Music
 #!author=kewachan
 #!system=iOS,iPadOS,tvOS,macOS
-#!loon_version=3.5.0(975)
+#!loon_version=3.5.1(988)
 
 [Argument]
 blockUpload = switch,true,tag=Block Upload Button
@@ -20,7 +20,7 @@ AND,((PROTOCOL,QUIC),(DOMAIN,youtubei.googleapis.com)),REJECT
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/navigation\/resolve_url(?:\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.navigation.response.js,tag=youtube.response.navigation,requires-body=true,binary-body-mode=true,timeout=30
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.response.js,tag=youtube.response,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang},{blockUpload},{blockImmersive},{blockShorts},{debug}]
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/get_panel(?:\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.lyrics.js,tag=youtube.lyrics,requires-body=true,binary-body-mode=true,timeout=25,argument=[{lyricsLang},{debug}]
-http-request ^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.* script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js,tag=youtube.request.init,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang}]
+http-response ^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.* script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.init.response.js,tag=youtube.response.init,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang},{debug}]
 http-request ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js,tag=youtube.request.log_event,requires-body=true,binary-body-mode=true,timeout=20
 http-request ^https:\/\/www\.youtube\.com\/api\/timedtext\?(?:[^&]*&)*tlang=[^&]+(?:&|$) script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.caption.js,tag=youtube.caption.request,timeout=10
 http-response ^https:\/\/www\.youtube\.com\/api\/timedtext\?(?:[^&]*&)*(?:enhance_)?tlang=[^&]+(?:&|$) script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.caption.js,tag=youtube.caption.response,requires-body=true,timeout=30
