@@ -9,6 +9,7 @@ blockUpload = switch,true,tag=Block Upload Button
 blockImmersive = switch,true,tag=Block Immersive Button
 blockShorts = switch,false,tag=Block Shorts Button
 captionLang = input,"off",tag=Caption Translation Language
+lyricsLang = input,"zh-Hant",tag=Lyrics Translation Language
 debug = switch,false,tag=Enable Debug Mode
 
 [Rule]
@@ -18,6 +19,7 @@ AND,((PROTOCOL,QUIC),(DOMAIN,youtubei.googleapis.com)),REJECT
 [Script]
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/navigation\/resolve_url(?:\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.navigation.response.js,tag=youtube.response.navigation,requires-body=true,binary-body-mode=true,timeout=30
 http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.response.js,tag=youtube.response,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang},{blockUpload},{blockImmersive},{blockShorts},{debug}]
+http-response ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/get_panel(?:\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.lyrics.js,tag=youtube.lyrics,requires-body=true,binary-body-mode=true,timeout=25,argument=[{lyricsLang},{debug}]
 http-request ^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.* script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js,tag=youtube.request.init,requires-body=true,binary-body-mode=true,timeout=30,argument=[{captionLang}]
 http-request ^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.request.js,tag=youtube.request.log_event,requires-body=true,binary-body-mode=true,timeout=20
 http-request ^https:\/\/www\.youtube\.com\/api\/timedtext\?(?:[^&]*&)*tlang=[^&]+(?:&|$) script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Youtube/youtube.caption.js,tag=youtube.caption.request,timeout=10
