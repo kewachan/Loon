@@ -17,7 +17,11 @@
   const rewrite=(bytes,transform)=>{const chunks=[];let position=0;while(position<bytes.length){const fieldStart=position,[tag,afterTag]=readVarint(bytes,position),fieldNo=Math.floor(tag/8),wireType=tag%8;position=afterTag;let payloadStart=position,payloadEnd;if(wireType===0){[,payloadEnd]=readVarint(bytes,position)}else if(wireType===1)payloadEnd=position+8;else if(wireType===2){const[length,afterLength]=readVarint(bytes,position);payloadStart=afterLength;payloadEnd=afterLength+length}else if(wireType===5)payloadEnd=position+4;else throw new Error(`Unsupported protobuf wire type ${wireType}`);if(payloadEnd>bytes.length)throw new Error("Truncated protobuf field");const replacement=transform({fieldNo,wireType,payload:bytes.subarray(payloadStart,payloadEnd)});if(replacement===null){position=payloadEnd;continue}if(replacement&&wireType===2)chunks.push(bytes.subarray(fieldStart,afterTag),writeVarint(replacement.length),replacement);else chunks.push(bytes.subarray(fieldStart,payloadEnd));position=payloadEnd}return concat(chunks)};
   const stripAdExtension=bytes=>rewrite(bytes,field=>field.fieldNo===62960614&&field.wireType===2&&contains(field.payload,pagead)&&contains(field.payload,googleads)?null:void 0);
   const patched=rewrite(source,field=>{if(field.fieldNo!==14||field.wireType!==2)return;const extensions=stripAdExtension(field.payload);return extensions.length?extensions:null});
-  if(patched.length!==source.length)$response.body=patched;
+  if(patched.length!==source.length){
+    const finish=$done;
+    $response.body=patched;
+    $done=result=>{const response=result?.response??result,hasBody=response?.body!=null||response?.bodyBytes!=null;finish(hasBody?result:{body:$response.body})};
+  }
 }catch(error){console.log(`YouTube Music Next ad patch: ${error}`)}})();
 // Remove Sponsored continuation cards stored in the currently unknown
 // Browse.onResponseReceivedAction.sectionListRenderer protobuf field 32.
