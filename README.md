@@ -9,7 +9,7 @@
 ### Architecture
 
 - YouTube app -> Loon request/response scripts -> YouTube API.
-- Caption and lyrics text -> dedicated `caption-translate` Worker -> Cache API -> Workers AI, only when translation is enabled.
+- Caption text -> Google Translate public endpoint; lyrics text -> dedicated `youtube-lyrics-translate` Worker -> Cache API -> Workers AI, only when translation is enabled.
 
 ### Key Files
 
@@ -26,8 +26,8 @@
 - An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
-- Translation requests use a 7-day result cache, coalesce identical in-flight work within one Worker isolate, and cap each isolate at three concurrent Workers AI calls.
-- No playback routing override is installed: the user's configuration must route API and media consistently. Only the dedicated translation Worker is explicitly DIRECT.
+- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use a 7-day Worker cache, coalesce identical in-flight work, and cap each isolate at three concurrent Workers AI calls.
+- No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
 
 ### Important Decisions
 
@@ -37,10 +37,11 @@
 - Do not force Music media DIRECT while its API uses a proxy. Upstream non-OK player responses remain unchanged.
 - Account headers are forwarded only to the original YouTube API and are never persisted. The hot-config handoff still needs real-device confirmation after updates.
 - Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
-- The translation Worker implementation and deployment remain shared with the Surge project; it does not use Durable Objects or proactive translation.
+- The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route, and the lyrics Worker does not use Durable Objects or proactive translation.
 
 ### Recent Significant Changes
 
+- `2026-10-01` — Moved captions back to deadline-bounded Google Translate batches; renamed the lyrics Worker to `youtube-lyrics-translate`, upgraded its model, split it from the media source, and removed the obsolete caption Worker/AI path.
 - `2026-09-30` — Switched captions and lyrics to the dedicated cached translation Worker and routed that Worker DIRECT; playback processing remains local.
 - `2026-09-30` — Replayed five Loon captures; fixed raw config parsing, concurrent key rotation, startup preflight, and removed the media-only DIRECT override.
 - `2026-09-29` — Moved encrypted `initplayback` processing into Loon Build 988+ and removed the playback Worker handoff.
