@@ -1,5 +1,5 @@
 // Loon-specific YouTube request handler.
-// Removes stale compression and hot-hash headers from telemetry requests.
+// Removes stale compression and hot-hash headers from key-refresh requests.
 
 (function () {
   "use strict";
@@ -32,13 +32,22 @@
     return headers;
   }
 
+  function hasValidClientKey(config, platformKey) {
+    const value = config[platformKey]?.clientKey;
+    if (typeof value !== "string" || !value.length) return false;
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "");
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) return false;
+    const payload = normalized.replace(/=+$/, "");
+    return payload.length % 4 !== 1 && Math.floor(payload.length * 6 / 8) === 32;
+  }
+
   try {
     const config = readConfig();
     const platformKey = String(findHeader($request.headers, "user-agent")).toLowerCase().includes("music")
       ? "youtubeMusic"
       : "youtube";
     const headers = deleteHeaders({ ...($request.headers || {}) }, ["content-encoding"]);
-    if (!config[platformKey]?.clientKey) deleteHeaders(headers, [HOT_HASH_HEADER]);
+    if (!hasValidClientKey(config, platformKey)) deleteHeaders(headers, [HOT_HASH_HEADER]);
     $done({ headers });
   } catch (error) {
     console.log(`YouTube request handler failed: ${String(error)}`);

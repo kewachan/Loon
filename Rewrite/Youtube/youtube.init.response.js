@@ -755,6 +755,7 @@
     let encrypted = 0;
     let processed = 0;
     let failed = 0;
+    let keyFailures = 0;
     let removed = 0;
     let enhanced = 0;
     let changed = false;
@@ -776,10 +777,14 @@
         changed ||= result.changed;
       } catch (error) {
         failed++;
+        if (String(error).includes("HMAC verification failed")) keyFailures++;
         console.log(`YouTube encrypted response part was left unchanged: ${String(error)}`);
       }
     }
-    return { bytes: changed ? encodeUmp(parts) : bytes, encrypted, processed, failed, removed, enhanced, changed };
+    return {
+      bytes: changed ? encodeUmp(parts) : bytes,
+      encrypted, processed, failed, keyFailures, removed, enhanced, changed,
+    };
   }
 
   function readArguments() {
@@ -794,6 +799,15 @@
   function readConfig() {
     try { return JSON.parse($persistentStore.read(CONFIG_KEY) || "{}"); }
     catch (error) { throw new Error(`Config read failed: ${String(error)}`); }
+  }
+
+  function clearPlatformConfig(config, platformKey) {
+    if (!config[platformKey]) return false;
+    delete config[platformKey];
+    if (!$persistentStore.write(JSON.stringify(config), CONFIG_KEY)) {
+      throw new Error(`Failed to clear stale ${platformKey} client key`);
+    }
+    return true;
   }
 
   function findHeader(headers, name) {
@@ -848,6 +862,10 @@
         finish({});
       } else {
         const result = processUmpResponse(body, clientKey, args.captionLang);
+        const staleKey = result.encrypted > 0
+          && result.processed === 0
+          && result.keyFailures === result.failed;
+        const clearedStaleKey = staleKey && clearPlatformConfig(config, platformKey);
         if (args.debug) {
           console.log(JSON.stringify({
             message: "YouTube local initplayback",
@@ -857,6 +875,8 @@
             encryptedParts: result.encrypted,
             processedParts: result.processed,
             failedParts: result.failed,
+            keyFailures: result.keyFailures,
+            clearedStaleKey,
             removed: result.removed,
             enhanced: result.enhanced,
             changed: result.changed,
