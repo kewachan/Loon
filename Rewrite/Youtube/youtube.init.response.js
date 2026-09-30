@@ -5,6 +5,8 @@
   "use strict";
 
   const CONFIG_KEY = "YouTubeConfig";
+  const KEY_RING_PREFIX = "YouTubePlaybackKeys.v2.";
+  const MAX_CACHED_KEYS = 8;
   const ENCRYPTED_INNERTUBE_RESPONSE = 25;
   const MAX_RESPONSE_BYTES = 24 * 1024 * 1024;
   const MAX_CAPTION_LANGUAGE_CHARS = 32;
@@ -398,12 +400,35 @@
     return { bytes: changed ? concatBytes(...nextOutput) : nextBytes, removed };
   }
 
+  function stripAudioAdNextExtension(nextBytes) {
+    if (!containsBytes(nextBytes, PAGEAD_MARKER) || !containsBytes(nextBytes, GOOGLEADS_MARKER)) {
+      return { bytes: nextBytes, removed: 0 };
+    }
+    const output = [];
+    let removed = 0;
+    for (const field of parseProto(nextBytes)) {
+      if (field.no !== 14 || field.wire !== 2) {
+        output.push(field.raw);
+        continue;
+      }
+      const extensions = parseProto(field.value);
+      const filtered = extensions.filter((extension) => !(extension.no === 62960614 && extension.wire === 2
+        && containsBytes(extension.value, PAGEAD_MARKER) && containsBytes(extension.value, GOOGLEADS_MARKER)));
+      const count = extensions.length - filtered.length;
+      removed += count;
+      if (!count) output.push(field.raw);
+      else if (filtered.length) output.push(encodeLengthDelimitedField(14, concatBytes(...filtered.map((item) => item.raw))));
+    }
+    return { bytes: removed ? concatBytes(...output) : nextBytes, removed };
+  }
+
   function stripNextResponseAds(nextBytes) {
     try {
-      const ads = stripCommentAreaAdRenderers(nextBytes);
+      const audioAds = stripAudioAdNextExtension(nextBytes);
+      const ads = stripCommentAreaAdRenderers(audioAds.bytes);
       const moreVideos = stripMoreVideosAds(ads.bytes);
       const shopping = stripTimelyShoppingShelf(moreVideos.bytes);
-      return { bytes: shopping.bytes, removed: ads.removed + moreVideos.removed + shopping.removed };
+      return { bytes: shopping.bytes, removed: audioAds.removed + ads.removed + moreVideos.removed + shopping.removed };
     } catch (error) {
       console.log(`YouTube NextResponse was left unchanged: ${String(error)}`);
       return { bytes: nextBytes, removed: 0 };
@@ -501,6 +526,12 @@
   }
 
   function stripPlayerAds(playerBytes, captionLanguage) {
+    const playability = firstProtoField(parseProto(playerBytes), 2, 2)?.value;
+    const status = playability && firstProtoField(parseProto(playability), 1, 0)?.value?.value;
+    // An upstream playback error is not an advertisement or a usable player.
+    if (status !== undefined && status !== 0) {
+      return { bytes: playerBytes, removed: 0, enhanced: false };
+    }
     const output = [];
     let removed = 0;
     let enhanced = false;
@@ -749,7 +780,24 @@
     };
   }
 
-  function processUmpResponse(bytes, clientKey, captionLanguage) {
+  function matchingClientKey(partBytes, candidates) {
+    const fields = parseProto(partBytes);
+    const ciphertext = firstProtoField(fields, 1, 2)?.value;
+    const signature = firstProtoField(fields, 2, 2)?.value;
+    const iv = firstProtoField(fields, 3, 2)?.value;
+    if (!ciphertext || signature?.length !== 32 || iv?.length !== 16) {
+      throw new Error("Incomplete encrypted response part");
+    }
+    const signedBytes = concatBytes(ciphertext, iv);
+    for (const key of candidates) {
+      if (equalBytes(signature, hmacSha256(key.subarray(16), signedBytes))) return key;
+    }
+    throw new Error("Encrypted response HMAC verification failed");
+  }
+
+  function processUmpResponse(bytes, clientKeys, captionLanguage) {
+    const candidates = (Array.isArray(clientKeys) ? clientKeys : [clientKeys])
+      .filter((key) => key?.length === 32).slice(0, MAX_CACHED_KEYS);
     const parts = parseUmp(bytes);
     let nextDataIsEncryptedResponse = false;
     let encrypted = 0;
@@ -769,6 +817,10 @@
       nextDataIsEncryptedResponse = false;
       encrypted++;
       try {
+        const clientKey = matchingClientKey(part.data, candidates);
+        // Reuse the authenticated key first for the remaining stream parts.
+        const index = candidates.indexOf(clientKey);
+        if (index > 0) candidates.unshift(...candidates.splice(index, 1));
         const result = processEncryptedResponsePart(part.data, clientKey, captionLanguage);
         part.data = result.bytes;
         processed++;
@@ -796,16 +848,57 @@
     return defaults;
   }
 
-  function readConfig() {
-    try { return JSON.parse($persistentStore.read(CONFIG_KEY) || "{}"); }
-    catch (error) { throw new Error(`Config read failed: ${String(error)}`); }
+  function readKeyRing(platformKey) {
+    try {
+      const state = JSON.parse($persistentStore.read(KEY_RING_PREFIX + platformKey) || "{}");
+      return (Array.isArray(state.entries) ? state.entries : [])
+        .filter((entry) => entry && Number.isFinite(entry.expiresAt) && entry.expiresAt > Date.now())
+        .slice(0, MAX_CACHED_KEYS);
+    } catch (_) { return []; }
   }
 
-  function clearPlatformConfig(config, platformKey) {
-    if (!config[platformKey]) return false;
-    delete config[platformKey];
-    if (!$persistentStore.write(JSON.stringify(config), CONFIG_KEY)) {
-      throw new Error(`Failed to clear stale ${platformKey} client key`);
+  function readClientKeys(platformKey) {
+    const entries = readKeyRing(platformKey);
+    // Prefer the exact encryptKey sent by this request, not the last config
+    // received. Concurrent config/log_event responses rotate independent keys.
+    try {
+      let requestBody = toBytes($request.body);
+      if (requestBody?.[0] === 31 && requestBody?.[1] === 139) requestBody = $utils.ungzip(requestBody);
+      const encryptedRequest = requestBody && firstProtoField(parseProto(requestBody), 3, 2)?.value;
+      const encryptKey = encryptedRequest && firstProtoField(parseProto(encryptedRequest), 5, 2)?.value;
+      if (encryptKey) {
+        const index = entries.findIndex((entry) => equalBytes(decodeBase64(entry.encryptKey), encryptKey));
+        if (index > 0) entries.unshift(...entries.splice(index, 1));
+      }
+    } catch (_) { /* HMAC matching remains authoritative if request parsing fails. */ }
+    const keys = [];
+    for (const entry of entries) {
+      try {
+        const key = decodeBase64(entry.clientKey);
+        if (key.length === 32 && !keys.some((cached) => equalBytes(cached, key))) keys.push(key);
+      } catch (_) { /* Ignore only this invalid cache entry. */ }
+    }
+    // Read-only migration for installations that still have the old cache.
+    if (!keys.length) {
+      try {
+        const config = JSON.parse($persistentStore.read(CONFIG_KEY) || "{}");
+        const key = decodeBase64(config[platformKey]?.clientKey || "");
+        if (key.length === 32) keys.push(key);
+      } catch (_) { /* A new /next will bootstrap the key cache. */ }
+    }
+    return keys;
+  }
+
+  function requestKeyRefresh(platformKey) {
+    // Read again so a concurrent config response is never overwritten by an
+    // old snapshot. A missing key must not delete other valid cached keys.
+    let state;
+    try { state = JSON.parse($persistentStore.read(KEY_RING_PREFIX + platformKey) || "{}"); }
+    catch (_) { state = {}; }
+    if (state.refreshNeeded) return true;
+    state.refreshNeeded = true;
+    if (!$persistentStore.write(JSON.stringify(state), KEY_RING_PREFIX + platformKey)) {
+      throw new Error("Failed to request playback key refresh");
     }
     return true;
   }
@@ -854,18 +947,16 @@
       console.log("YouTube local initplayback requires Loon Build 988 or later");
       finish({});
     } else {
-      const config = readConfig();
       const platformKey = isMusicRequest($request.headers) ? "youtubeMusic" : "youtube";
-      const clientKey = decodeBase64(config[platformKey]?.clientKey || "");
-      if (clientKey.length !== 32) {
+      const clientKeys = readClientKeys(platformKey);
+      if (!clientKeys.length) {
+        requestKeyRefresh(platformKey);
         if (args.debug) console.log(`YouTube local initplayback has no valid ${platformKey} client key`);
         finish({});
       } else {
-        const result = processUmpResponse(body, clientKey, args.captionLang);
-        const staleKey = result.encrypted > 0
-          && result.processed === 0
-          && result.keyFailures === result.failed;
-        const clearedStaleKey = staleKey && clearPlatformConfig(config, platformKey);
+        const result = processUmpResponse(body, clientKeys, args.captionLang);
+        const staleKey = result.keyFailures > 0;
+        const refreshRequested = staleKey && requestKeyRefresh(platformKey);
         if (args.debug) {
           console.log(JSON.stringify({
             message: "YouTube local initplayback",
@@ -876,7 +967,8 @@
             processedParts: result.processed,
             failedParts: result.failed,
             keyFailures: result.keyFailures,
-            clearedStaleKey,
+            candidateKeys: clientKeys.length,
+            refreshRequested,
             removed: result.removed,
             enhanced: result.enhanced,
             changed: result.changed,

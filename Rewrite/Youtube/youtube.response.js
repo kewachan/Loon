@@ -1,3 +1,77 @@
+// Supply a prefetched hot config before the app constructs encrypted playback.
+// The original response context and every other Next field are preserved.
+(() => { try {
+  if (!/\/next(?:\?|$)/.test($request.url) || !$response.body) return;
+  const header = name => {
+    const key = Object.keys($request.headers || {}).find(key => key.toLowerCase() === name);
+    return key ? String($request.headers[key]) : "";
+  };
+  const platform = /music/i.test(header("user-agent")) ? "youtubeMusic" : "youtube";
+  const state = JSON.parse($persistentStore.read("YouTubePlaybackKeys.v2." + platform) || "{}");
+  const pending = state.pending;
+  if (!pending || Date.now() - pending.savedAt > 30000 || pending.requestHash !== header("x-youtube-hot-hash-data")) return;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let bits = 0, value = 0;
+  const decoded = [];
+  for (const char of pending.globalConfig) {
+    if (char === "=") break;
+    const digit = alphabet.indexOf(char);
+    if (digit < 0) throw new Error("Invalid hot config encoding");
+    value = (value << 6) | digit; bits += 6;
+    if (bits >= 8) { bits -= 8; decoded.push((value >>> bits) & 255); }
+  }
+  const hotConfig = new Uint8Array(decoded);
+  const read = (bytes, start) => {
+    let value = 0, multiplier = 1, position = start;
+    for (; position < bytes.length && position - start < 10; position++) {
+      const byte = bytes[position]; value += (byte & 127) * multiplier;
+      if (!(byte & 128)) return [value, position + 1];
+      multiplier *= 128;
+    }
+    throw new Error("Invalid protobuf varint");
+  };
+  const encode = value => {
+    const out = [];
+    do { const byte = value % 128; value = Math.floor(value / 128); out.push(byte | (value ? 128 : 0)); } while (value);
+    return new Uint8Array(out);
+  };
+  const join = chunks => {
+    const out = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+    let offset = 0;
+    for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.length; }
+    return out;
+  };
+  const field = (no, bytes) => join([encode(no * 8 + 2), encode(bytes.length), bytes]);
+  const replace = (bytes, no, transform, append) => {
+    const chunks = []; let position = 0, found = false;
+    while (position < bytes.length) {
+      const start = position; let tag;
+      [tag, position] = read(bytes, position);
+      const wire = tag % 8, number = Math.floor(tag / 8); let payload;
+      if (wire === 0) [, position] = read(bytes, position);
+      else if (wire === 1) position += 8;
+      else if (wire === 5) position += 4;
+      else if (wire === 2) {
+        let length; [length, position] = read(bytes, position);
+        payload = bytes.subarray(position, position + length); position += length;
+      } else throw new Error("Unsupported protobuf field");
+      if (position > bytes.length) throw new Error("Truncated protobuf field");
+      if (number === no && wire === 2) {
+        if (!found) chunks.push(field(no, transform(payload)));
+        found = true;
+      } else chunks.push(bytes.subarray(start, position));
+    }
+    if (!found) chunks.push(field(no, append));
+    return join(chunks);
+  };
+  const input = $response.body instanceof Uint8Array ? $response.body : new Uint8Array($response.body);
+  $response.body = replace(input, 1, context => replace(context, 16, () => hotConfig, hotConfig), field(16, hotConfig));
+  const finish = $done;
+  $done = result => {
+    const response = result?.response ?? result;
+    finish(response?.body != null || response?.bodyBytes != null ? result : { body: $response.body });
+  };
+} catch (error) { console.log("YouTube hot config handoff: " + String(error)); } })();
 // Build: 2026/8/28 kewachan post-play More videos ad fix
 // Advertisement learning caches are versioned, bounded, and scoped by endpoint
 // in the generated bundle below so one response type cannot poison another.
