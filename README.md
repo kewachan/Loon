@@ -9,7 +9,7 @@
 ### Architecture
 
 - YouTube app -> Loon request/response scripts -> YouTube API.
-- Caption text -> Google Translate public endpoint; lyrics text -> private Bearer token -> dedicated `youtube-lyrics-translate` Worker -> Cache API -> Workers AI, only when translation is enabled.
+- Caption text -> Google Translate public endpoint. Lyrics use the dedicated `youtube-lyrics-translate` Worker with a valid private Bearer token; without one, the device calls Google Translate directly.
 
 ### Key Files
 
@@ -40,10 +40,11 @@
 - Account headers are forwarded only to the original YouTube API and are never persisted. The hot-config handoff still needs real-device confirmation after updates.
 - Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
 - The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route, and the lyrics Worker does not use Durable Objects or proactive translation.
-- The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; each authorized user enters it locally.
+- The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; authorized users enter it locally, while a missing or invalid token must bypass the Worker and use Google Translate directly.
 
 ### Recent Significant Changes
 
+- `2026-10-05` — Made a missing or invalid lyric access token use Google Translate directly without calling the Worker; cached Google results only retry AI when a valid token is present.
 - `2026-10-05` — Made same-language lyric handling follow the exact language／script／locale in `lyricsLang`, preserved Simplified／Traditional conversion, suppressed duplicate unchanged lines, and invalidated target-unaware caches.
 - `2026-10-03` — Restored 12-line／600-character logical lyric batches while keeping 4-line／180-character Worker splitting, added full-batch context to every AI sub-request, and reset lyric cache versions so context-free results are not reused; invalid single-line AI output retries once, then returns promptly for device-side Google fallback.
 - `2026-10-01` — Added private Bearer-token authentication for lyric translation; unauthorized requests are rejected before Workers AI runs.
