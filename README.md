@@ -28,6 +28,7 @@
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
 - Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters; the shared Worker splits them into parallel AI requests of at most 4 lines or 180 characters while giving every sub-request the complete logical batch as translation context.
+- The lyrics Worker applies the user-selected target language and writing system per line. Exact matches are returned unchanged, the client neither duplicates them nor adds an attribution, and `zh-Hant`／`zh-Hans` still convert between scripts.
 - No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
 
 ### Important Decisions
@@ -43,6 +44,7 @@
 
 ### Recent Significant Changes
 
+- `2026-10-05` — Made same-language lyric handling follow the exact language／script／locale in `lyricsLang`, preserved Simplified／Traditional conversion, suppressed duplicate unchanged lines, and invalidated target-unaware caches.
 - `2026-10-03` — Restored 12-line／600-character logical lyric batches while keeping 4-line／180-character Worker splitting, added full-batch context to every AI sub-request, and reset lyric cache versions so context-free results are not reused; invalid single-line AI output retries once, then returns promptly for device-side Google fallback.
 - `2026-10-01` — Added private Bearer-token authentication for lyric translation; unauthorized requests are rejected before Workers AI runs.
 - `2026-10-01` — Moved captions back to deadline-bounded Google Translate batches; renamed the lyrics Worker to `youtube-lyrics-translate`, upgraded its model, split it from the media source, and removed the obsolete caption Worker/AI path.
