@@ -27,7 +27,7 @@
 - An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
-- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters; the shared Worker splits them into parallel AI requests of at most 4 lines or 180 characters while giving every sub-request the complete logical batch as translation context.
+- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters; the shared Worker normally translates each complete batch in one AI inference and splits only after invalid JSON output.
 - The lyrics Worker applies the user-selected target language and writing system per line. Exact matches are returned unchanged, the client neither duplicates them nor adds an attribution, and `zh-Hant`／`zh-Hans` still convert between scripts.
 - No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
 
@@ -41,12 +41,14 @@
 - Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
 - The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route, and the lyrics Worker does not use Durable Objects or proactive translation.
 - The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; authorized users enter it locally, while a missing or invalid token must bypass the Worker and use Google Translate directly.
+- `zh-Hant`／`zh-TW` AI output containing clear Simplified Chinese glyphs is rejected and never cached; the client uses Google Translate fallback for that batch.
 
 ### Recent Significant Changes
 
+- `2026-10-05` — Reduced normal lyric translation from several AI calls to one call per 12-line／600-character batch, added a `zh-Hant` Simplified-glyph guard, and invalidated old Worker/client caches.
 - `2026-10-05` — Made a missing or invalid lyric access token use Google Translate directly without calling the Worker; cached Google results only retry AI when a valid token is present.
 - `2026-10-05` — Made same-language lyric handling follow the exact language／script／locale in `lyricsLang`, preserved Simplified／Traditional conversion, suppressed duplicate unchanged lines, and invalidated target-unaware caches.
-- `2026-10-03` — Restored 12-line／600-character logical lyric batches while keeping 4-line／180-character Worker splitting, added full-batch context to every AI sub-request, and reset lyric cache versions so context-free results are not reused; invalid single-line AI output retries once, then returns promptly for device-side Google fallback.
+- `2026-10-03` — Restored 12-line／600-character logical lyric batches with full-batch context and reset lyric cache versions so context-free results are not reused.
 - `2026-10-01` — Added private Bearer-token authentication for lyric translation; unauthorized requests are rejected before Workers AI runs.
 - `2026-10-01` — Moved captions back to deadline-bounded Google Translate batches; renamed the lyrics Worker to `youtube-lyrics-translate`, upgraded its model, split it from the media source, and removed the obsolete caption Worker/AI path.
 - `2026-09-30` — Switched captions and lyrics to the dedicated cached translation Worker and routed that Worker DIRECT; playback processing remains local.
