@@ -9,7 +9,7 @@
 ### Architecture
 
 - YouTube app -> Loon request/response scripts -> YouTube API.
-- Caption text -> Google Translate public endpoint. Lyrics use the dedicated `youtube-lyrics-translate` Worker with a valid private Bearer token; without one, the device calls Google Translate directly.
+- Caption text -> Google Translate public endpoint. With a valid private Bearer token, lyrics use the dedicated `youtube-lyrics-translate` Worker: AI cache hits return immediately, while misses return Google first and warm Workers AI in the background. Without a token, the device calls Google Translate directly.
 
 ### Key Files
 
@@ -27,7 +27,7 @@
 - An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
-- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters; the shared Worker normally translates each complete batch in one AI inference and splits only after invalid JSON output.
+- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters. The shared Worker returns a 14-day AI cache hit immediately; on a miss it returns Google first and uses `waitUntil` to warm AI in the background. Provisional Google results remain in the client cache for only 2 minutes.
 - The lyrics Worker applies the user-selected target language and writing system per line. Exact matches are returned unchanged, the client neither duplicates them nor adds an attribution, and `zh-Hant`／`zh-Hans` still convert between scripts.
 - No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
 
@@ -39,12 +39,13 @@
 - Do not force Music media DIRECT while its API uses a proxy. Upstream non-OK player responses remain unchanged.
 - Account headers are forwarded only to the original YouTube API and are never persisted. The hot-config handoff still needs real-device confirmation after updates.
 - Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
-- The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route, and the lyrics Worker does not use Durable Objects or proactive translation.
+- The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route. Lyrics use request-local background warming plus Cache API warming／cooldown markers and do not use Durable Objects.
 - The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; authorized users enter it locally, while a missing or invalid token must bypass the Worker and use Google Translate directly.
 - `zh-Hant`／`zh-TW` AI output containing clear Simplified Chinese glyphs is rejected and never cached; the client uses Google Translate fallback for that batch.
 
 ### Recent Significant Changes
 
+- `2026-10-06` — Changed lyrics to Google-first／AI background warm: AI cache hits return immediately, misses return Google while `waitUntil` prepares the 14-day AI cache, and provisional Google client entries expire after 2 minutes.
 - `2026-10-05` — Reduced normal lyric translation from several AI calls to one call per 12-line／600-character batch, added a `zh-Hant` Simplified-glyph guard, and invalidated old Worker/client caches.
 - `2026-10-05` — Made a missing or invalid lyric access token use Google Translate directly without calling the Worker; cached Google results only retry AI when a valid token is present.
 - `2026-10-05` — Made same-language lyric handling follow the exact language／script／locale in `lyricsLang`, preserved Simplified／Traditional conversion, suppressed duplicate unchanged lines, and invalidated target-unaware caches.
@@ -55,7 +56,6 @@
 - `2026-09-30` — Replayed five Loon captures; fixed raw config parsing, concurrent key rotation, startup preflight, and removed the media-only DIRECT override.
 - `2026-09-29` — Moved encrypted `initplayback` processing into Loon Build 988+ and removed the playback Worker handoff.
 - `2026-09-28` — Added local cleanup for advertisements embedded when external links open in YouTube.
-- `2026-09-11` — Kept buffered HTTP/2 Worker requests but removed forced DIRECT routing to preserve YouTube Music playback.
 
 ### Start Here
 
