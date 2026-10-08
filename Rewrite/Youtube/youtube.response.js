@@ -1,3 +1,7 @@
+// Some response callbacks omit User-Agent. Normalize only that missing case
+// before the bundled platform check calls String.includes().
+(()=>{try{const headers=$request.headers??($request.headers={});if(headers["user-agent"]==null&&headers["User-Agent"]==null)headers["user-agent"]=""}catch{}})();
+
 // Supply a prefetched hot config before the app constructs encrypted playback.
 // The original response context and every other Next field are preserved.
 (() => { try {
