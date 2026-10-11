@@ -1,0 +1,73 @@
+#AI Generated
+
+##### China #####
+
+# Damai
+DOMAIN,gm.mmstat.com
+DOMAIN,h-adashx.ut.hzshudian.com
+DOMAIN,px.effirst.com
+
+# Tuhu
+DOMAIN,analytics.tuhu.com
+DOMAIN,ta.tuhu.cn
+
+# Dcard
+DOMAIN,bilanx.dcard.tw
+
+# ByteDance and TikTok
+DOMAIN,api16-access-wf-sg.pangle.io
+DOMAIN,api16-dual-event-sg2.pangle.io
+DOMAIN,api16-access-ttp.tiktokpangle.us
+DOMAIN,api16-access-wf-sg.pangle-b.io
+
+# RedNote
+DOMAIN,lng.rnote.com
+DOMAIN,referee.rnote.com
+DOMAIN,spider-tracker.xiaohongshu.com
+DOMAIN,t2.rnote.com
+
+# Tencent
+DOMAIN,otheve.beacon.qq.com
+
+##### International #####
+
+# Analytics and Diagnostics
+DOMAIN,analytics.adjust.com
+DOMAIN,analytics.adjust.io
+DOMAIN,app-analytics-services.com
+DOMAIN,app-measurement.com
+DOMAIN,b.karte.io
+DOMAIN,census-app-x.scorecardresearch.com
+DOMAIN,cnam4c.cdn-settings.appsflyersdk.com
+DOMAIN,hv.survicate.com
+DOMAIN,mmfayl-cdn-settings.appsflyersdk.com
+DOMAIN,mmfayl-launches.appsflyersdk.com
+DOMAIN,survey-prd.survicate-cdn.com
+DOMAIN,uooh2y.cdn-settings.appsflyersdk.com
+DOMAIN,uooh2y.conversions.appsflyersdk.com
+DOMAIN,uooh2y.skadsdk.appsflyersdk.com
+
+# Advertising Platforms
+DOMAIN,adx.apx.appier.net
+DOMAIN,cdn2.inner-active.mobi
+DOMAIN,config.inmobi.com
+DOMAIN,d.applovin.com
+DOMAIN,d.applvn.com
+DOMAIN,gateway.unityads.unity3d.com
+DOMAIN,googleads.g.doubleclick.net
+DOMAIN,m.vpon.com
+DOMAIN,ms.applovin.com
+DOMAIN,ms.applvn.com
+DOMAIN,ms4.applovin.com
+DOMAIN,ms4.applvn.com
+DOMAIN,prod-mediate-events.applovin.com
+DOMAIN,pubads.g.doubleclick.net
+DOMAIN,r2d2.aotter.net
+DOMAIN,rt.applovin.com
+DOMAIN,skadnetworks.fyber.com
+DOMAIN,static.aottercdn.com
+DOMAIN,sts.applovin.com
+DOMAIN,trek-fp-dmp.aotter.net
+
+# Tag Management
+DOMAIN,www.googletagmanager.com

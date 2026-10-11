@@ -1,18 +1,29 @@
 # Loon
 
+## Filters
+
+Import the general advertising and tracking list as a Loon Remote Rule with the `REJECT` policy:
+
+```text
+https://raw.githubusercontent.com/kewachan/Loon/main/Filters/filters_block.list,policy=REJECT,tag=General Ad Block,enabled=true
+```
+
 ## Codex Project Context
 
 ### Purpose
 
-- Provide Loon plugins for YouTube and YouTube Music enhancements.
+- Provide Loon rules for advertising and tracking domains.
+- Provide plugins for YouTube and YouTube Music enhancements.
 
 ### Architecture
 
+- App traffic -> imported remote rules -> `REJECT` for confirmed advertising and tracking domains.
 - YouTube app -> Loon request/response scripts -> YouTube API.
 - Caption text -> Google Translate public endpoint. With a valid private Bearer token, lyrics use the dedicated `youtube-lyrics-translate` Worker: AI cache hits return immediately, while misses return Google first and warm Workers AI in the background. Without a token, the device calls Google Translate directly.
 
 ### Key Files
 
+- `Filters/filters_block.list` — confirmed advertising and tracking domain rules.
 - `Rewrite/Youtube/YouTube.Enhance.plugin` — Loon plugin configuration.
 - `Rewrite/Youtube/youtube.init.response.js` — local encrypted playback response transformation.
 - `Rewrite/Youtube/youtube.request.js` — binary config capture, playback key ring, and bounded preflight recovery.
@@ -23,6 +34,8 @@
 
 ### Core Logic
 
+- HAR-confirmed advertising and tracking domains are grouped by region and company in the remote rule list.
+- The user imports the list with `policy=REJECT`; it requires no MITM or response script.
 - Config/log_event responses are parsed as raw protobuf fields; unrelated binary fields cannot abort key capture. Each app keeps up to eight expiring playback keys.
 - An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
@@ -33,6 +46,7 @@
 
 ### Important Decisions
 
+- General ad blocking uses a plain remote rule list; only high-confidence domains are added.
 - Playback bodies are never uploaded to the Worker, avoiding callback buffering resets and Worker/media egress mismatches.
 - HMAC verification is fail-open: any unknown, unauthenticated, or unsupported encrypted part remains byte-for-byte unchanged.
 - A missing key requests a refresh but never clears the ring. Failed preflight preserves normal playback; no `/player` fallback or synthetic success response is generated.
@@ -45,6 +59,7 @@
 
 ### Recent Significant Changes
 
+- `2026-10-11` — Added a high-confidence advertising and tracking remote rule list from HAR evidence.
 - `2026-10-06` — Changed lyrics to Google-first／AI background warm: AI cache hits return immediately, misses return Google while `waitUntil` prepares the 14-day AI cache, and provisional Google client entries expire after 2 minutes.
 - `2026-10-05` — Reduced normal lyric translation from several AI calls to one call per 12-line／600-character batch, added a `zh-Hant` Simplified-glyph guard, and invalidated old Worker/client caches.
 - `2026-10-05` — Made a missing or invalid lyric access token use Google Translate directly without calling the Worker; cached Google results only retry AI when a valid token is present.
@@ -54,11 +69,10 @@
 - `2026-10-01` — Moved captions back to deadline-bounded Google Translate batches; renamed the lyrics Worker to `youtube-lyrics-translate`, upgraded its model, split it from the media source, and removed the obsolete caption Worker/AI path.
 - `2026-09-30` — Switched captions and lyrics to the dedicated cached translation Worker and routed that Worker DIRECT; playback processing remains local.
 - `2026-09-30` — Replayed five Loon captures; fixed raw config parsing, concurrent key rotation, startup preflight, and removed the media-only DIRECT override.
-- `2026-09-29` — Moved encrypted `initplayback` processing into Loon Build 988+ and removed the playback Worker handoff.
-- `2026-09-28` — Added local cleanup for advertisements embedded when external links open in YouTube.
 
 ### Start Here
 
+- `Filters/filters_block.list`
 - `Rewrite/Youtube/YouTube.Enhance.plugin`
 - `Rewrite/Youtube/youtube.navigation.response.js`
 - `Rewrite/Youtube/youtube.init.response.js`
