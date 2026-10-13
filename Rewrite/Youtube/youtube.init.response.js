@@ -481,12 +481,11 @@
   function addCaptionTrackIndex(audioTrackBytes, captionTrackIndex) {
     const output = [];
     for (const field of parseProto(audioTrackBytes)) {
-      if (![3, 4, 6, 7, 11].includes(field.no)) output.push(field.raw);
+      if (![3, 4, 7, 11].includes(field.no)) output.push(field.raw);
     }
     output.push(encodeLengthDelimitedField(2, encodeProtoVarint(captionTrackIndex)));
     output.push(encodeVarintField(3, captionTrackIndex));
-    output.push(encodeVarintField(6, 1));
-    output.push(encodeVarintField(11, 2));
+    output.push(encodeVarintField(11, 3));
     return concatBytes(...output);
   }
 
@@ -930,7 +929,7 @@
 
   if (typeof globalThis !== "undefined" && globalThis.__YOUTUBE_LOCAL_TEST__) {
     globalThis.__YOUTUBE_LOCAL_TEST__.exports = {
-      concatBytes, decodeBase64, encodeLengthDelimitedField, encodeVarintField,
+      addEnhanceCaptionTrack, concatBytes, decodeBase64, encodeLengthDelimitedField, encodeVarintField,
       encodeUmp, hmacSha256, parseProto, parseUmp, processEncryptedResponsePart,
       processUmpResponse, sha256, stripOnesieResponseAds,
     };
