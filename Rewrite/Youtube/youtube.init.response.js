@@ -484,6 +484,8 @@
       if (![3, 4, 6, 7, 11].includes(field.no)) output.push(field.raw);
     }
     output.push(encodeLengthDelimitedField(2, encodeProtoVarint(captionTrackIndex)));
+    output.push(encodeVarintField(3, captionTrackIndex));
+    output.push(encodeVarintField(6, 1));
     output.push(encodeVarintField(11, 2));
     return concatBytes(...output);
   }
