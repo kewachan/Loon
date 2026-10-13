@@ -1,44 +1,16 @@
-// Route YouTube srv3 captions through a streaming translation Worker.
-// The legacy response path remains as a bounded fallback for existing rewritten requests.
+// Translate YouTube srv3 captions with Google's public web translation endpoint.
+// No account or API key is required. Public endpoint limits still apply.
 
 const TRANSLATE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
-const CAPTION_WORKER_ENDPOINT = "https://youtube-caption-translate.hmtw47cv7m.workers.dev/caption/jobs";
-const CAPTION_STREAM_ENDPOINT = "https://youtube-caption-translate.hmtw47cv7m.workers.dev/caption/translate";
 const MAX_ENCODED_QUERY_CHARS = 6000;
 const CONCURRENCY = 3;
-const TRANSLATE_TIMEOUT_SECONDS = 2;
-const MAX_RETRIES = 0;
+const RESPONSE_BUDGET_MS = 4500;
+const TRANSLATE_TIMEOUT_SECONDS = 4;
+const MAX_RETRIES = 1;
 const MIN_RETRY_WINDOW_MS = 1200;
-const RETRY_DELAY_MS = 200;
-const SCRIPT_RESPONSE_BUDGET_MS = 6800;
-const MIN_RESPONSE_BUDGET_MS = 1000;
-const MAX_RESPONSE_BUDGET_MS = 7200;
-const QUEUE_SUBMIT_TIMEOUT_SECONDS = 3;
-const QUEUE_POLL_TIMEOUT_SECONDS = 1;
-const QUEUE_DEFAULT_POLL_MS = 250;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CACHE_LIMIT = 96;
-const CACHE_INDEX_KEY = "YouTubeCaption.CacheIndex.v5";
-
-function scriptOptions() {
-  const defaults = {captionToken: "", debug: false};
-  try {
-    if (typeof $argument === "string" && !$argument.includes("{{{")) {
-      return {...defaults, ...JSON.parse($argument)};
-    }
-    if (typeof $argument === "object" && $argument) return {...defaults, ...$argument};
-  } catch (_) {}
-  return defaults;
-}
-
-function validCaptionToken(value) {
-  const token = String(value || "").trim();
-  return token.length >= 32 && token.length <= 128 && !/\s/.test(token) && token !== "paste-token-here";
-}
-
-function debugLog(options, message) {
-  if (options.debug) console.log(`YouTube caption: ${message}`);
-}
+const CACHE_INDEX_KEY = "YouTubeCaption.CacheIndex.v4";
 
 function getQueryValue(url, name) {
   const match = url.match(new RegExp(`[?&]${name}=([^&#]*)`));
@@ -57,7 +29,7 @@ function cacheKey(query, source, target) {
     hash ^= value.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return `YouTubeCaption.v5.${(hash >>> 0).toString(16)}`;
+  return `YouTubeCaption.v4.${(hash >>> 0).toString(16)}`;
 }
 
 function readCachedParts(key, length) {
@@ -90,30 +62,12 @@ function writeCachedParts(key, parts) {
   } catch (_) {}
 }
 
-function rewriteCaptionRequest(url, options, requestHeaders) {
+function rewriteCaptionRequest(url) {
   const target = getQueryValue(url, "tlang");
-  if (!target) return {};
-  try {
-    const sourceUrl = new URL(url);
-    sourceUrl.searchParams.delete("tlang");
-    sourceUrl.searchParams.delete("enhance_tlang");
-    sourceUrl.searchParams.set("format", "srv3");
-    const proxyUrl = new URL(CAPTION_STREAM_ENDPOINT);
-    proxyUrl.searchParams.set("target", mapTargetLanguage(target));
-    proxyUrl.searchParams.set("url", sourceUrl.toString());
-    const headers = {...(requestHeaders || {})};
-    for (const name of Object.keys(headers)) {
-      if (["authorization", "cookie", "host", "content-length"].includes(name.toLowerCase())) delete headers[name];
-    }
-    headers.Accept = "text/xml, application/xml;q=0.9, */*;q=0.1";
-    if (validCaptionToken(options.captionToken)) headers.Authorization = `Bearer ${options.captionToken.trim()}`;
-    return {url: proxyUrl.toString(), headers};
-  } catch (error) {
-    debugLog(options, `stream route unavailable: ${error}`);
-    return {url: url.replace(/([?&])tlang=([^&#]*)/, (_, separator, value) =>
-      `${separator}enhance_tlang=${encodeURIComponent(mapTargetLanguage(decodeURIComponent(value)))}`,
-    )};
-  }
+  if (!target) return url;
+  return url.replace(/([?&])tlang=([^&#]*)/, (_, separator, value) =>
+    `${separator}enhance_tlang=${encodeURIComponent(mapTargetLanguage(decodeURIComponent(value)))}`,
+  );
 }
 
 function decodeXml(text) {
@@ -145,12 +99,11 @@ function separator(index) {
   return `\n[[YTS:${index}]]\n`;
 }
 
-function buildBatches(captions, missingOnly = false) {
+function buildBatches(captions) {
   const batches = [];
   let items = [];
   let query = "";
   captions.forEach((caption, index) => {
-    if (missingOnly && caption.translated) return;
     const addition = `${items.length ? separator(index) : ""}${caption.text}`;
     if (items.length && encodeURIComponent(query + addition).length > MAX_ENCODED_QUERY_CHARS) {
       batches.push({items, query});
@@ -162,97 +115,6 @@ function buildBatches(captions, missingOnly = false) {
   });
   if (items.length) batches.push({items, query});
   return batches;
-}
-
-function applyCachedTranslations(captions, source, target) {
-  for (const batch of buildBatches(captions)) {
-    const parts = readCachedParts(cacheKey(batch.query, source, target), batch.items.length);
-    if (!parts) continue;
-    batch.items.forEach((item, index) => { captions[item.captionIndex].translated = parts[index].trim(); });
-  }
-}
-
-function writeResolvedCaches(captions, source, target) {
-  for (const batch of buildBatches(captions)) {
-    const parts = batch.items.map((item) => String(captions[item.captionIndex].translated || "").trim());
-    if (parts.every(Boolean)) writeCachedParts(cacheKey(batch.query, source, target), parts);
-  }
-}
-
-function captionWorkerRequest(method, url, token, body, timeoutSeconds) {
-  return new Promise((resolve, reject) => {
-    const request = {
-      url,
-      timeout: typeof $loon !== "undefined" ? timeoutSeconds * 1000 : timeoutSeconds,
-      headers: {Accept: "application/json"},
-    };
-    if (validCaptionToken(token)) request.headers.Authorization = `Bearer ${token.trim()}`;
-    if (body !== undefined) {
-      request.headers["Content-Type"] = "application/json";
-      request.body = JSON.stringify(body);
-    }
-    const callback = (error, response, responseBody) => {
-      if (error) return reject(error);
-      try {
-        const status = response.status || response.statusCode;
-        if (status < 200 || status >= 300) throw new Error(`Caption Worker status ${status}`);
-        const parsed = responseBody ? JSON.parse(responseBody) : {};
-        resolve(parsed);
-      } catch (parseError) {
-        reject(parseError);
-      }
-    };
-    if (method === "POST") $httpClient.post(request, callback);
-    else $httpClient.get(request, callback);
-  });
-}
-
-async function translateWithQueue(entries, source, target, token, options, deadline) {
-  const created = await captionWorkerRequest("POST", CAPTION_WORKER_ENDPOINT, token, {
-    purpose: "captions",
-    source,
-    target,
-    texts: entries.map((entry) => entry.text),
-  }, QUEUE_SUBMIT_TIMEOUT_SECONDS);
-  if (!/^[0-9a-f-]{36}$/i.test(String(created?.jobId || ""))) throw new Error("Invalid Caption Worker job response");
-  if ((created.status === "complete" || created.status === "failed")
-    && Array.isArray(created.translations)) return created;
-
-  const statusUrl = `${CAPTION_WORKER_ENDPOINT}/${created.jobId}`;
-  const pollMs = Math.max(250, Math.min(2000, Number(created.pollAfterMs) || QUEUE_DEFAULT_POLL_MS));
-  let latest = null;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, Math.min(pollMs, Math.max(0, deadline - Date.now()))));
-    if (Date.now() >= deadline) break;
-    const remainingSeconds = Math.max(1, Math.min(
-      QUEUE_POLL_TIMEOUT_SECONDS,
-      Math.ceil((deadline - Date.now()) / 1000),
-    ));
-    try {
-      latest = await captionWorkerRequest("GET", statusUrl, token, undefined, remainingSeconds);
-      if (!Array.isArray(latest?.translations) || latest.translations.length !== entries.length) {
-        throw new Error("Invalid Caption Worker status response");
-      }
-      debugLog(options, `queue ${latest.status} ${latest.completedBatches || 0}/${latest.batchCount || 0}`);
-      if (latest.status === "complete" || latest.status === "failed") return latest;
-    } catch (error) {
-      debugLog(options, `queue poll delayed: ${error}`);
-    }
-  }
-  return latest;
-}
-
-function applyQueuedTranslations(entries, result, captions) {
-  if (!Array.isArray(result?.translations)) return 0;
-  let applied = 0;
-  result.translations.forEach((translation, index) => {
-    const text = String(translation || "").trim();
-    const entry = entries[index];
-    if (!text || !entry) return;
-    captions[entry.captionIndex].translated = text;
-    applied++;
-  });
-  return applied;
 }
 
 function requestTranslation(query, source, target, timeoutSeconds) {
@@ -288,8 +150,9 @@ async function fetchTranslation(query, source, target, deadline) {
     } catch (error) {
       lastError = error;
       if (attempt === MAX_RETRIES) break;
-      if (Date.now() + RETRY_DELAY_MS + MIN_RETRY_WINDOW_MS >= deadline) break;
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      const delay = 200;
+      if (Date.now() + delay + MIN_RETRY_WINDOW_MS >= deadline) break;
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
   throw lastError || new Error("Caption translation failed");
@@ -303,18 +166,8 @@ function rebuildBatch(items, captions) {
 }
 
 async function translateBatches(batches, captions, source, target) {
-  if (!batches.length) return;
   const queue = [...batches];
-  const waves = Math.max(1, Math.ceil(batches.length / CONCURRENCY));
-  const retryWindow = (MAX_RETRIES + 1) * TRANSLATE_TIMEOUT_SECONDS * 1000
-    + RETRY_DELAY_MS + MIN_RETRY_WINDOW_MS;
-  const calculatedBudget = Math.min(
-    MAX_RESPONSE_BUDGET_MS,
-    Math.max(MIN_RESPONSE_BUDGET_MS, waves * retryWindow),
-  );
-  const deadline = Date.now() + calculatedBudget;
-  const responseBudget = Math.max(0, deadline - Date.now());
-  if (!responseBudget) return;
+  const deadline = Date.now() + RESPONSE_BUDGET_MS;
   let cursor = 0;
   async function worker() {
     while (cursor < queue.length && Date.now() < deadline) {
@@ -343,13 +196,11 @@ async function translateBatches(batches, captions, source, target) {
   }
   const work = Promise.all(Array.from({length: Math.min(CONCURRENCY, queue.length)}, worker));
   let timer;
-  await Promise.race([work, new Promise((resolve) => { timer = setTimeout(resolve, responseBudget); })]);
+  await Promise.race([work, new Promise((resolve) => { timer = setTimeout(resolve, RESPONSE_BUDGET_MS); })]);
   if (timer) clearTimeout(timer);
 }
 
 async function translateCaptionResponse() {
-  const options = scriptOptions();
-  const responseDeadline = Date.now() + SCRIPT_RESPONSE_BUDGET_MS;
   const target = mapTargetLanguage(getQueryValue($request.url, "enhance_tlang") || getQueryValue($request.url, "tlang"));
   const source = getQueryValue($request.url, "lang") || "auto";
   if (!target || !$response.body) return $done({});
@@ -372,34 +223,7 @@ async function translateCaptionResponse() {
   }
   if (!captions.length) return $done({});
 
-  applyCachedTranslations(captions, source, target);
-  const entries = captions
-    .map((caption, captionIndex) => ({captionIndex, text: caption.text, translated: caption.translated}))
-    .filter((entry) => !entry.translated);
-  let useDirectFallback = false;
-  if (entries.length) {
-    try {
-      const queued = await translateWithQueue(
-        entries,
-        source,
-        target,
-        options.captionToken,
-        options,
-        responseDeadline,
-      );
-      const applied = applyQueuedTranslations(entries, queued, captions);
-      debugLog(options, `queue returned ${applied}/${entries.length} captions`);
-      useDirectFallback = queued?.status === "failed";
-      writeResolvedCaches(captions, source, target);
-    } catch (error) {
-      console.log(`Caption Worker queue failed: ${error}`);
-      useDirectFallback = true;
-    }
-  }
-  if (useDirectFallback) {
-    await translateBatches(buildBatches(captions, true), captions, source, target);
-  }
-  writeResolvedCaches(captions, source, target);
+  await translateBatches(buildBatches(captions), captions, source, target);
   let output = "";
   let position = 0;
   captions.forEach((caption) => {
@@ -412,8 +236,7 @@ async function translateCaptionResponse() {
 }
 
 if (typeof $response === "undefined") {
-  const options = scriptOptions();
-  $done(rewriteCaptionRequest($request.url, options, $request.headers));
+  $done({url: rewriteCaptionRequest($request.url)});
 } else {
   translateCaptionResponse().catch((error) => {
     console.log(`Google caption translation failed: ${error}`);

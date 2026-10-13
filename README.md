@@ -19,7 +19,7 @@ https://raw.githubusercontent.com/kewachan/Loon/main/Filters/filters_block.list,
 
 - App traffic -> imported remote rules -> `REJECT` for confirmed advertising and tracking domains.
 - YouTube app -> Loon request/response scripts -> YouTube API.
-- Caption requests -> streaming `youtube-caption-translate` Worker -> durable translation queue. Lyrics use the separate `youtube-lyrics-translate` Worker when a valid private Bearer token is configured.
+- Caption text -> Google Translate public endpoint. With a valid private Bearer token, lyrics use the dedicated `youtube-lyrics-translate` Worker: AI cache hits return immediately, while misses return Google first and warm Workers AI in the background. Without a token, the device calls Google Translate directly.
 
 ### Key Files
 
@@ -40,7 +40,7 @@ https://raw.githubusercontent.com/kewachan/Loon/main/Filters/filters_block.list,
 - An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
 - External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
 - Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
-- Caption requests are moved off the app's short response-script deadline: the caption Worker sends the XML prefix immediately, keeps the response active while its durable queue runs, then completes the document with ordered translations. The legacy local response path is capped at 6.8 seconds. Lyrics use logical client batches of at most 12 lines or 600 characters.
+- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters. The shared Worker returns a 14-day AI cache hit immediately; on a miss it returns Google first and uses `waitUntil` to warm AI in the background. Provisional Google results remain in the client cache for only 2 minutes.
 - The lyrics Worker applies the user-selected target language and writing system per line. Exact matches are returned unchanged, the client neither duplicates them nor adds an attribution, and `zh-Hant`／`zh-Hans` still convert between scripts.
 - No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
 
@@ -53,13 +53,12 @@ https://raw.githubusercontent.com/kewachan/Loon/main/Filters/filters_block.list,
 - Do not force Music media DIRECT while its API uses a proxy. Upstream non-OK player responses remain unchanged.
 - Account headers are forwarded only to the original YouTube API and are never persisted. The hot-config handoff still needs real-device confirmation after updates.
 - Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
-- The `youtube-lyrics-translate` and `youtube-caption-translate` deployments remain shared with the Surge project. The media Worker has no AI binding or translation route. Caption jobs use a Queue and Durable Object; lyrics use request-local background warming plus Cache API warming／cooldown markers.
+- The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route. Lyrics use request-local background warming plus Cache API warming／cooldown markers and do not use Durable Objects.
 - The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; authorized users enter it locally, while a missing or invalid token must bypass the Worker and use Google Translate directly.
 - `zh-Hant`／`zh-TW` AI output containing clear Simplified Chinese glyphs is rejected and never cached; the client uses Google Translate fallback for that batch.
 
 ### Recent Significant Changes
 
-- `2026-10-13` — Routed caption requests through a streaming Worker response so long background jobs no longer leave the app waiting without response bytes and hitting its roughly eight-second timeout.
 - `2026-10-11` — Added a high-confidence advertising and tracking remote rule list from HAR evidence.
 - `2026-10-06` — Changed lyrics to Google-first／AI background warm: AI cache hits return immediately, misses return Google while `waitUntil` prepares the 14-day AI cache, and provisional Google client entries expire after 2 minutes.
 - `2026-10-05` — Reduced normal lyric translation from several AI calls to one call per 12-line／600-character batch, added a `zh-Hant` Simplified-glyph guard, and invalidated old Worker/client caches.
