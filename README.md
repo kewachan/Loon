@@ -1,80 +1,10 @@
 # Loon
 
-## Filters
+## Lists
 
-Import the general advertising and tracking list as a Loon Remote Rule with the `REJECT` policy:
+- [`Filters/filters_block.list`](Filters/filters_block.list) — 封鎖廣告及追蹤器網域。
 
-```text
-https://raw.githubusercontent.com/kewachan/Loon/main/Filters/filters_block.list,policy=REJECT,tag=General Ad Block,enabled=true
-```
+## Plugins
 
-## Codex Project Context
-
-### Purpose
-
-- Provide Loon rules for advertising and tracking domains.
-- Provide plugins for YouTube and YouTube Music enhancements.
-
-### Architecture
-
-- App traffic -> imported remote rules -> `REJECT` for confirmed advertising and tracking domains.
-- YouTube app -> Loon request/response scripts -> YouTube API.
-- Caption text -> Google Translate public endpoint. With a valid private Bearer token, lyrics use the dedicated `youtube-lyrics-translate` Worker: AI cache hits return immediately, while misses return Google first and warm Workers AI in the background. Without a token, the device calls Google Translate directly.
-
-### Key Files
-
-- `Filters/filters_block.list` — confirmed advertising and tracking domain rules.
-- `Rewrite/Youtube/YouTube.Enhance.plugin` — Loon plugin configuration.
-- `Rewrite/Youtube/youtube.init.response.js` — local encrypted playback response transformation.
-- `Rewrite/Youtube/youtube.request.js` — binary config capture, playback key ring, and bounded preflight recovery.
-- `Rewrite/Youtube/youtube.response.js` — protobuf response filtering and enhancements.
-- `Rewrite/Youtube/youtube.navigation.response.js` — external-link playback advertisement cleanup.
-- `Rewrite/Youtube/youtube.caption.js` — caption translation handling.
-- `Rewrite/Youtube/youtube.lyrics.js` — deadline-bounded lyric batching, provider fallback, and local cache handling.
-
-### Core Logic
-
-- HAR-confirmed advertising and tracking domains are grouped by region and company in the remote rule list.
-- The user imports the list with `policy=REJECT`; it requires no MITM or response script.
-- Config/log_event responses are parsed as raw protobuf fields; unrelated binary fields cannot abort key capture. Each app keeps up to eight expiring playback keys.
-- An unknown `/next` hot hash triggers a same-route `/config` preflight using only request context (3-second timeout, 10-second cooldown). The resulting global config is handed to the app in the normal Next response context.
-- External-link navigation responses have embedded ad placements, ad slots, and page-ad tracking removed locally.
-- Loon Build 988+ selects the request's cached encryptKey, authenticates candidates with HMAC, and filters Player/Next ads inside encrypted `initplayback` without discarding concurrent keys.
-- Captions are translated in parallel batches within the client's short response deadline and cached locally for 7 days. Lyrics use logical client batches of at most 12 lines or 600 characters. The shared Worker returns a 14-day AI cache hit immediately; on a miss it returns Google first and uses `waitUntil` to warm AI in the background. Provisional Google results remain in the client cache for only 2 minutes.
-- The lyrics Worker applies the user-selected target language and writing system per line. Exact matches are returned unchanged, the client neither duplicates them nor adds an attribution, and `zh-Hant`／`zh-Hans` still convert between scripts.
-- No playback routing override is installed: the user's configuration must route API and media consistently. Google Translate and the dedicated lyrics translation Worker are explicitly DIRECT.
-
-### Important Decisions
-
-- General ad blocking uses a plain remote rule list; only high-confidence domains are added.
-- Playback bodies are never uploaded to the Worker, avoiding callback buffering resets and Worker/media egress mismatches.
-- HMAC verification is fail-open: any unknown, unauthenticated, or unsupported encrypted part remains byte-for-byte unchanged.
-- A missing key requests a refresh but never clears the ring. Failed preflight preserves normal playback; no `/player` fallback or synthetic success response is generated.
-- Do not force Music media DIRECT while its API uses a proxy. Upstream non-OK player responses remain unchanged.
-- Account headers are forwarded only to the original YouTube API and are never persisted. The hot-config handoff still needs real-device confirmation after updates.
-- Every modified AES-CTR part receives a new locally derived IV and a new HMAC-SHA256 signature.
-- The `youtube-lyrics-translate` implementation and deployment remain shared with the Surge project; captions bypass it. The media Worker has no AI binding or translation route. Lyrics use request-local background warming plus Cache API warming／cooldown markers and do not use Durable Objects.
-- The shared lyrics access token exists only as a Cloudflare Secret. The public plugin contains no valid token; authorized users enter it locally, while a missing or invalid token must bypass the Worker and use Google Translate directly.
-- `zh-Hant`／`zh-TW` AI output containing clear Simplified Chinese glyphs is rejected and never cached; the client uses Google Translate fallback for that batch.
-
-### Recent Significant Changes
-
-- `2026-10-11` — Added a high-confidence advertising and tracking remote rule list from HAR evidence.
-- `2026-10-06` — Changed lyrics to Google-first／AI background warm: AI cache hits return immediately, misses return Google while `waitUntil` prepares the 14-day AI cache, and provisional Google client entries expire after 2 minutes.
-- `2026-10-05` — Reduced normal lyric translation from several AI calls to one call per 12-line／600-character batch, added a `zh-Hant` Simplified-glyph guard, and invalidated old Worker/client caches.
-- `2026-10-05` — Made a missing or invalid lyric access token use Google Translate directly without calling the Worker; cached Google results only retry AI when a valid token is present.
-- `2026-10-05` — Made same-language lyric handling follow the exact language／script／locale in `lyricsLang`, preserved Simplified／Traditional conversion, suppressed duplicate unchanged lines, and invalidated target-unaware caches.
-- `2026-10-03` — Restored 12-line／600-character logical lyric batches with full-batch context and reset lyric cache versions so context-free results are not reused.
-- `2026-10-01` — Added private Bearer-token authentication for lyric translation; unauthorized requests are rejected before Workers AI runs.
-- `2026-10-01` — Moved captions back to deadline-bounded Google Translate batches; renamed the lyrics Worker to `youtube-lyrics-translate`, upgraded its model, split it from the media source, and removed the obsolete caption Worker/AI path.
-- `2026-09-30` — Switched captions and lyrics to the dedicated cached translation Worker and routed that Worker DIRECT; playback processing remains local.
-- `2026-09-30` — Replayed five Loon captures; fixed raw config parsing, concurrent key rotation, startup preflight, and removed the media-only DIRECT override.
-
-### Start Here
-
-- `Filters/filters_block.list`
-- `Rewrite/Youtube/YouTube.Enhance.plugin`
-- `Rewrite/Youtube/youtube.navigation.response.js`
-- `Rewrite/Youtube/youtube.init.response.js`
-- `Rewrite/Youtube/youtube.request.js`
-- `Rewrite/Youtube/youtube.response.js`
+- [`Rewrite/Adrewrite.plugin`](Rewrite/Adrewrite.plugin) — 自行維護的廣告封鎖、Google 搜尋及 Wikipedia 重新導向規則。
+- [`Rewrite/Youtube/YouTube.Enhance.plugin`](Rewrite/Youtube/YouTube.Enhance.plugin) — YouTube 與 YouTube Music 功能增強、廣告移除及字幕／歌詞翻譯。

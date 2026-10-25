@@ -1,0 +1,161 @@
+#!name=Adblock Rewrite & Redirect
+#!author=kewachan
+#!desc=For daily App advertisement blocking and redirect
+#!date=2026-10-25
+#!loon_version=3.5.1(978)
+
+[Rewrite]
+##### Macau #####
+#Macau Taxi
+request if ${url} ~= /^https?:\/\/plus.maasplus.com\/prod-api\/app\/advert\/list\?adPage=travel/i then reject(404)
+
+#CTMbuddy
+request if ${url} ~= /^https?:\/\/www.ctm.net\/crm_api\/crm-cms-server\/\w\/advertise\/by\/adv/i then reject(404)
+request if ${url} ~= /^https?:\/\/www\.ctm\.net\/crm_api\/crm-cms-server\/g\/advertise\/by\/buddyConf/i then reject(404)
+request if ${url} ~= /^https?:\/\/www.ctm.net\/crm_api\/crm-cms-server\/\w\/advertise\/by\/openingAdv/i then reject(404)
+request if ${url} ~= /^https?:\/\/www\.ctm\.net\/crm_api\/crm-cluster-server\/p\/by\/v2\/advertise\/bdayBanner/i then reject(404)
+request if ${url} ~= /^https?:\/\/www.ctm.net\/crm_api\/crm-portal-server\/\w\/by\/loyalty\/member\/ads\?/i then reject(404)
+
+#Macau Movie
+request if ${url} ~= /^https?:\/\/macaumovie.com\/ad-media/i then reject(404)
+request if ${url} ~= /^https?:\/\/macaumovie.com\/api\/v1\/ad/i then reject(404)
+
+#Namkwong
+request if ${url} ~= /^https?:\/\/app.namkwong.com.mo\/gasstation_app\/aBanner/i then reject(404)
+
+#MacaoOneAccount
+request if ${url} ~= /^https?:\/\/mas\-mpaas.mo.gov.mo\/loggw/i then reject(404)
+
+#Tikbee
+request if ${url} ~= /^https?:\/\/api.tikbee.com\/v2\/wm\/ad\/getByKey\?/i then reject(404)
+request if ${url} ~= /^https?:\/\/api.tikbee.com\/v1\/advertis\/getAdByKey\?/i then reject(404)
+request if ${url} ~= /^https?:\/\/api.tikbee.com\/v1\/advertis\/getByKey\?/i then reject(404)
+request if ${url} ~= /^http?:\/\/statistic.live.126.net\/statics\/report\/common\/form/i then reject(404)
+
+#MPay
+request if ${url} ~= /^https?:\/\/pay.macaupass.com\/tdrmp\/adver\//i then reject(404)
+request if ${url} ~= /^https?:\/\/gateway\-mp.macaupass.com\/mpay\/tdrmp\/newGateway\/adver\//i then reject(404)
+request if ${url} ~= /^https?:\/\/quicktracking\-api.macaupass.com/i then reject(404)
+request if ${url} ~= /^https?:\/\/gateway\.macaupass\.com\/mcoin\-mall\/api\/v2\/business\/indexpostercache/i then reject(404)
+
+#Mfood
+request if ${url} ~= /^https?:\/\/userside.api.o2o.mfoodapp.com\/orgs\/banner\/advertisement/i then reject(404)
+request if ${url} ~= /^https?:\/\/userside.api.o2o.mfoodapp.com\/orgs\/basic\/banner/i then reject(404)
+request if ${url} ~= /^https?:\/\/release.userside.api.o2o.mfoodapp.com\/orgs\/banner\/advertisement/i then reject(404)
+request if ${url} ~= /^https?:\/\/release.userside.api.o2o.mfoodapp.com\/orgs\/basic\/banner/i then reject(404)
+
+#Aomi
+request if ${url} ~= /^https?:\/\/interface.aomiapp.com\/aomi-ads\/ad\//i then reject(404)
+
+##### Others #####
+
+#xiaohongshu
+request if ${url} ~= /^https?:\/\/.+\.xiaohongshu\.com\/.+(metrics|report|Report)/i then reject(404)
+request if ${url} ~= /^https?:\/\/edith\.rnote\.com\/api\/sns\/v1\/note\/metrics_report/i then reject(404)
+request if ${url} ~= /^https?:\/\/edith\.rnote\.com\/api\/usergrowth\/behavior\/report/i then reject(404)
+request if ${url} ~= /^https?:\/\/www\.rnote\.com\/api\/sns\/v1\/ads\/apple\/record/i then reject(404)
+request if ${url} ~= /^https?:\/\/www\.rnote\.com\/api\/sns\/v1\/tag\/ads_engage/i then reject(404)
+
+#Manhuashe
+request if ${url} ~= /^https?:\/\/comicapi\.manhuashe\.com\/v\d\/ads/i then reject(404)
+request if ${url} ~= /^https?:\/\/comicapi\.manhuashe\.com\/v\d\/public\/homenav/i then reject(404)
+request if ${url} ~= /^https?:\/\/comicapi\.manhuashe\.com\/v\d\/public\/topicbytype/i then reject(404)
+request if ${url} ~= /^https?:\/\/comicapi\.manhuashe\.com\/v\d\/comic\/chapterendrecommend/i then reject(404)
+request if ${url} ~= /^https?:\/\/comicapi\.manhuashe\.com\/v\d\/public\/startupactivity/i then reject(404)
+
+#Lihkg
+request if ${url} ~= /^https?:\/\/adv\.lihkg\.com\/www\/delivery/i then reject(404)
+request if ${url} ~= /^https?:\/\/pb\.lihkg\.com\/taboola/i then reject(404)
+request if ${url} ~= /^https?:\/\/pb\.lihkg\.com\/smj/i then reject(404)
+
+#LINE
+request if ${url} ~= /^https:\/\/a\.line\.me(?::443)?\/er\/lads\/v\d+\/ei(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/a\.line\.me(?::443)?\/er\/(?:lass|ladg|lads)\/v\d+\/event\/image(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/a\.line\.me(?::443)?\/lass\/api\/v\d+\/ads(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/a\.line\.me(?::443)?\/oa\/v\d+\/e(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/a\.line\.me(?::443)?\/cs\/v\d+\/oa(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/gw\.line\.naver\.jp(?::443)?\/ext\/lgfp\/lad\/v\d+(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/gw\.line\.naver\.jp(?::443)?\/lass\/api\/v\d+\/ads(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/gw\.line\.naver\.jp(?::443)?\/tr\/event(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/legy\.line-apps\.com(?::443)?\/ext\/lgfp\/lad\/v\d+(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/legy\.line-apps\.com(?::443)?\/ext\/smartch\/banner\/sch\/v\d+(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/legy\.line-apps\.com(?::443)?\/tr\/event(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/w\.line\.me(?::443)?\/adp\/api\/ad\/v\d+\//i then reject(404)
+request if ${url} ~= /^https:\/\/sch\.line\.me(?::443)?\/api\/v\d+\/ads(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/static\.line-scdn\.net(?::443)?\/ad-sdk\//i then reject(404)
+request if ${url} ~= /^https:\/\/static\.line-scdn\.net(?::443)?\/uts\//i then reject(404)
+request if ${url} ~= /^https:\/\/web-mmap-pay\.line-apps\.com(?::443)?\/tw\/liff\/campaign\/v\d+\/aggregate\/ad\/banner\//i then reject(404)
+request if ${url} ~= /^https:\/\/scdn\.line-apps\.com(?::443)?\/lan\/image\/line\/bannerImageEvent\//i then reject(404)
+request if ${url} ~= /^https:\/\/scdn\.line-apps\.com(?::443)?\/lan\/document\/pageEvent\/line\/ios\//i then reject(404)
+request if ${url} ~= /^https:\/\/crs-event\.line\.me(?::443)?\/v\d+\/imp(?:\?|$)/i then reject(404)
+request if ${url} ~= /^https:\/\/cix\.line-apps\.com(?::443)?\/R\d+(?:\?|$)/i then reject(404)
+
+#WhatsApp
+request if ${url} ~= /^https:\/\/api\.whatsapp\.net\/falco\/pigeon_nest(?:\?.*)?$/i then reject(404)
+request if ${url} ~= /^https:\/\/api\.whatsapp\.net\/falco\/pigeon_health_metrics(?:\?.*)?$/i then reject(404)
+request if ${url} ~= /^https:\/\/dit\.whatsapp\.net\/deidentified_telemetry(?:\?.*)?$/i then reject(404)
+
+#amap
+request if ${url} ~= /^https?:\/\/m\d\.amap\.com\/ws\/valueadded\/alimama\/splash_screen?/i then reject(404)
+request if ${url} ~= /^https:\/\/m5\.amap\.com\/ws\/shield\/dsp\/app\/startup\/init\?/i then reject(404)
+request if ${url} ~= /^https?:\/\/m5\.amap\.com\/ws\/valueadded\//i then reject(404)
+request if ${url} ~= /^https?:\/\/optimus-ads\.amap\.com\/uploadimg\//i then reject(404)
+
+#Pintrest
+request if ${url} ~= /^https?:\/\/api.pinterest.com\/v3\/users\/third_party_tracking_settings\//i then reject(404)
+request if ${url} ~= /^https?:\/\/api\.pinterest\.com\/log\//i then reject(404)
+request if ${url} ~= /^https?:\/\/api\.pinterest\.com\/v3\/callback\/event\//i then reject(404)
+
+#4Gamers
+request if ${url} ~= /^https?:\/\/img.4gamers.com.tw\/ads-media/i then reject(404)
+request if ${url} ~= /^https?:\/\/www.4gamers.com.tw\/site\/api\/aols\/media\?slot=.*/i then reject(404)
+request if ${url} ~= /^https:\/\/www.4gamers.com.tw\/site\/iframe-aols\/HEADER_BANNER_MOBILE\?excludeGoogleAds=false&ignoreOverwriteSlot=true/i then reject(404)
+
+#AMP tracker
+request if ${url} ~= /^https?:\/\/cdn.ampproject.org\/rtv\/\d*\/v\d\/analytics-vendors/i then reject(404)
+request if ${url} ~= /^https?:\/\/3p.ampproject.net\/\d*\/vendor/i then reject(404)
+request if ${url} ~= /^https?:\/\/d-\d*\.ampproject.net\/\d*/i then reject(404)
+
+#HKTV mall
+request if ${url} ~= /^https?:\/\/ts-analysis.shoalter.com\/topics\/hktvmall_ios_tracker_event/i then reject(404)
+
+#Wikipedia
+request if ${url} ~= /(https?:\/\/zh.m.wikipedia.org\/)(wiki)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.m.wikipedia.org\/)(zh-cn)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.m.wikipedia.org\/)(zh-hans)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.m.wikipedia.org\/)(zh)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.wikipedia.org\/)(wiki)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.wikipedia.org\/)(zh-cn)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.wikipedia.org\/)(zh-hans)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+request if ${url} ~= /(https?:\/\/zh.wikipedia.org\/)(zh)(\/.+)/i as urlMatch then redirect(302, "${urlMatch.1}zh-hk${urlMatch.3}")
+
+#Google
+request if ${url} ~= /^(https?:\/\/www\.google\.com\/search\?)(?!(?:[^&#]*&)*(?:udm|tbm)=)(q=[^&#]+(?:&[^&#]*)*?)&client=[^&#]*([^#]*)(#.*|)$/i as urlMatch then redirect(302, "${urlMatch.1}${urlMatch.2}${urlMatch.3}&gl=hk&safe=off&udm=14${urlMatch.4}")
+request if ${url} ~= /^(https?:\/\/www\.google\.com\/search\?)(?=(?:[^&#]*&)*q=[^&#]+)(?!(?:[^&#]*&)*(?:udm|tbm)=)(?!q=[^&#]+(?:&[^&#]*)*&client=)([^#]+)(#.*|)$/i as urlMatch then redirect(302, "${urlMatch.1}udm=14&${urlMatch.2}${urlMatch.3}")
+request if ${url} ~= /^https?:\/\/www\.google\.com\/ads\/on-device\/conversions/i then reject(404)
+request if ${url} ~= /^https?:\/\/play\.google\.com\/newsstand\/api\/v3\/people\/me\/analytics/i then reject(404)
+request if ${url} ~= /^https?:\/\/cse\.google\.com\/adsense\/search\/async-ads\.js/i then reject(404)
+
+#Fanpiece
+request if ${url} ~= /^https?:\/\/gank\.fanpiece\.com\/ad\.php/i then reject(404)
+
+#Unwire
+request if ${url} ~= /^https?:\/\/unwire\.hk\/ads-beacon\.js/i then reject(404)
+
+#iDownloadBlog
+request if ${url} ~= /^https?:\/\/www\.idownloadblog\.com\/ads-beacon\.js/i then reject(404)
+
+#Mobile01
+request if ${url} ~= /^https?:\/\/attach2\.mobile01\.com\/js\/ad\/(?:adClickTracker|prebid)\.js/i then reject(404)
+
+#Yahoo
+request if ${url} ~= /^https?:\/\/s\.yimg\.com\/aaq\/prebid\/prebid-current\.js/i then reject(404)
+
+#Alibaba
+request if ${url} ~= /^https?:\/\/d\.alicdn\.com\/alilog\/mlog\/aplus\//i then reject(404)
+
+#ByteDance
+request if ${url} ~= /^https?:\/\/sf19-static\.i18n-pglstatp\.com\/obj\/ad-pattern-sg\/3p_monitor/i then reject(404)
+
+[Mitm]
+hostname = wikipedia.org, *.wikipedia.org, google.com, *.google.com, *.ctm.net, *.macaumovie.com, *.namkwong.com.mo, *.mo.gov.mo, *.tikbee.com, *.macaupass.com, *.mfoodapp.com, *.xiaohongshu.com, *.rnote.com, *.manhuashe.com, *.lihkg.com, a.line.me, gw.line.naver.jp, legy.line-apps.com, w.line.me, sch.line.me, static.line-scdn.net, web-mmap-pay.line-apps.com, scdn.line-apps.com, crs-event.line.me, cix.line-apps.com, api.whatsapp.net, dit.whatsapp.net, *.amap.com, *.pinterest.com, *.4gamers.com.tw, *.ampproject.org, *.shoalter.com, *.fanpiece.com, unwire.hk, *.idownloadblog.com, *.mobile01.com, *.yimg.com, *.alicdn.com, *.i18n-pglstatp.com
