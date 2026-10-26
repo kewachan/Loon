@@ -1,0 +1,35 @@
+############ International ############
+
+#Apple Pay
+DOMAIN, bag.itunes.apple.com
+DOMAIN, smp-device-content.apple.com
+
+#Apple Subscription
+DOMAIN, speedysub.itunes.apple.com
+DOMAIN, fpinit.itunes.apple.com
+
+#Oracle Cloud
+DOMAIN, console-telemetry.oci.oraclecloud.com
+DOMAIN-SUFFIX, oracleinfinity.io
+DOMAIN-SUFFIX, oraclecloud.com
+
+#MasterCard
+DOMAIN-SUFFIX, mastercard.com
+
+#radio
+DOMAIN, coolism-web.cdn.byteark.com
+DOMAIN, streaming.flexconnect.net
+DOMAIN-SUFFIX, theradioapp.com
+
+############ China ############
+
+#XiaoMi
+DOMAIN-SUFFIX, xiaomi.net
+DOMAIN-SUFFIX, mi.com
+DOMAIN, miot-spec.org
+DOMAIN-SUFFIX, youpin.mi-img.com
+DOMAIN-SUFFIX, xiaomiyoupin.com
+DOMAIN-SUFFIX, mijia.tech
+
+#12123#
+DOMAIN-SUFFIX, 122.gov.cn

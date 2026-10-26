@@ -1,0 +1,71 @@
+############ International ############
+
+#Dcard
+DOMAIN-SUFFIX, dcard.tw
+
+#Apple update CDN
+DOMAIN-SUFFIX, cdn-apple.com
+
+#Apple GrandSlam Authentication
+DOMAIN, gsa.apple.com
+
+#Youtube EI
+URL-REGEX,^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/browse(?:\?.*)?$
+URL-REGEX,^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/offline(?:\/[^?]*)?(?:\?.*)?$
+URL-REGEX,^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/player(?:\/[^?]*)?(?:\?.*)?$
+URL-REGEX,^https:\/\/[^\/]+\.googlevideo\.com\/videoplayback\?.*(?:\?|&)itag=
+
+#Google
+DOMAIN-SUFFIX, imasdk.googleapis.com
+
+#RandomArt
+DOMAIN-SUFFIX, randomdailyart.com
+
+#BasaltArt
+DOMAIN-SUFFIX, basalt.yevgenglukhov.com
+
+#Artvee
+DOMAIN-SUFFIX, artvee.com
+
+#Coolism
+DOMAIN-SUFFIX, byteark.com
+
+#HKTVmall
+DOMAIN-KEYWORD, hktvmall
+
+############ China ############
+
+#Taobao
+DOMAIN, trade-acs.m.taobao.com
+DOMAIN, trade-acs.wapa.taobao.com
+DOMAIN, px.ucweb.com
+
+#TP-Link
+DOMAIN-SUFFIX, tplinkcloud.com.cn
+
+#Netease
+DOMAIN-SUFFIX, easebar.com
+
+#Manhuashe
+DOMAIN-SUFFIX, manhuashe.com
+
+#xiaoyakankan
+DOMAIN-KEYWORD,kkzycdn
+DOMAIN-KEYWORD,bfikuncdn
+
+############ Macau ############
+
+#radio
+DOMAIN-SUFFIX, tdm.com.mo
+
+#CTM
+DOMAIN-SUFFIX, ctm.net
+
+#Oasis parking
+DOMAIN-KEYWORD, skyoasis
+
+#Macau government
+DOMAIN-SUFFIX, gov.mo
+
+#AXA
+DOMAIN-SUFFIX, axa.com.hk

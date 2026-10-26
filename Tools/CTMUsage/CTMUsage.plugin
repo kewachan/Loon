@@ -1,0 +1,17 @@
+#!name=CTM Usage Info
+#!desc=Shows CTM data usage and remaining full-speed balance with scheduled updates.
+#!author=kewachan
+#!homepage=https://github.com/kewachan/Loon
+#!tag=Tools
+#!date=2026-10-24
+#!version=1.0.9
+#!loon_version=3.5.1(988)
+
+[Argument]
+token = input,"paste-token-here",tag=CTM Token,desc=Your CTM Authorization token. The Bearer prefix is optional.
+timeout = input,8,type=number,tag=Request Timeout,desc=Request timeout in seconds (1-15).
+cronexp = input,"*/15 * * * *",tag=Refresh Schedule,desc=Cron schedule for automatic usage updates. Default is every 15 minutes.
+
+[Script]
+generic then script("https://raw.githubusercontent.com/kewachan/Loon/main/Tools/CTMUsage/ctm-usage.js", {${token}, ${timeout}}) with tag="CTM Usage Info", img_url="simcard.system", timeout=20
+cron ${cronexp} then script("https://raw.githubusercontent.com/kewachan/Loon/main/Tools/CTMUsage/ctm-usage.js", {${token}, ${timeout}}) with tag="CTM Usage Info Scheduled", timeout=20

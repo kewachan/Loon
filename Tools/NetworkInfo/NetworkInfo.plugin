@@ -1,0 +1,18 @@
+#!name=Network Info
+#!desc=Shows the selected route's country provider and public IPv4 address.
+#!homepage=https://github.com/kewachan/Loon
+#!tag=Tools
+#!date=2026-09-12
+#!version=1.1.1
+#!loon_version=3.5.1(988)
+
+[Argument]
+proxy_endpoint = input,"https://api-ipv4.ip.sb/ip",tag=IPv4 Endpoint,desc=URL used to retrieve the public IPv4 address.
+timeout = input,5,type=number,tag=Request Timeout,desc=Request timeout in seconds.
+retries = input,1,type=number,tag=Retries,desc=Retry attempts after a failed request.
+retry_delay = input,1,type=number,tag=Retry Delay,desc=Delay between retries in seconds.
+icon = input,"network",tag=Icon,desc=SF Symbol name.
+icon_color = input,"#6699FF",tag=Icon Color,desc=Icon color in HEX format.
+
+[Script]
+generic then script("https://raw.githubusercontent.com/kewachan/Loon/main/Tools/NetworkInfo/network-info.js", {${proxy_endpoint}, ${timeout}, ${retries}, ${retry_delay}, ${icon}, ${icon_color}}) with tag="Network Info", img_url="network.system", timeout=120

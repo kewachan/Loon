@@ -1,0 +1,90 @@
+#!name=Bilibili Enhance
+#!desc=Bilibili enhancements and ad removal
+#!author=VirgilClyne[https://github.com/VirgilClyne],ClydeTime[https://github.com/ClydeTime],app2smile[https://github.com/app2smile],RuCu6[https://github.com/RuCu6],kewachan[https://github.com/kewachan]
+#!homepage=https://github.com/kewachan/Loon
+#!icon=https://github.com/BiliUniverse/Enhanced/raw/main/src/assets/icon_rounded.png
+#!tag=Bilibili
+#!date=2026-10-17
+#!version=1.3.2
+#!loon_version=3.5.1(988)
+# Upstream: BiliUniverse Enhanced v0.5.13 and ADBlock v0.6.24
+# Sources: https://github.com/BiliUniverse/Enhanced, https://github.com/BiliUniverse/ADBlock
+# License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+# Upstream option IDs remain unchanged for script compatibility.
+
+[Argument]
+Home.Switch = switch,true,tag=Home Switch
+Home.Tab = input,"直播tab,推荐tab,hottopic,bangumi,anime,film,koreavtw",tag=Home Tab
+Home.Tab_default = input,"推荐tab",tag=Home Tab_default
+Home.Top_left = input,"mine",tag=Home Top_left
+Home.Top = input,"消息Top",tag=Home Top
+Bottom = input,"home,dynamic,ogv,会员购Bottom,我的Bottom",tag=Bottom
+Region.Switch = switch,true,tag=Region Switch
+Mine.Switch = switch,true,tag=Mine Switch
+Mine.iPad.Switch = switch,true,tag=Mine iPad Switch
+Storage = input,"Argument",tag=Storage
+Splash = switch,true,tag=Splash
+Feed.AD = switch,true,tag=Feed AD
+Feed.Activity = switch,true,tag=Feed Activity
+Feed.Vertical = switch,false,tag=Feed Vertical
+Feed.BlockUpLiveList = input,"",tag=Feed BlockUpLiveList
+Feed.Story = switch,true,tag=Feed Story
+Search.AD = switch,true,tag=Search AD
+Search.HotSearch = switch,true,tag=Search HotSearch
+PGC.AD = switch,true,tag=PGC AD
+Xlive.AD = switch,true,tag=Xlive AD
+Dynamic.HotTopics = switch,true,tag=Dynamic HotTopics
+Dynamic.MostVisited = switch,false,tag=Dynamic MostVisited
+Dynamic.MostVisitedLiveOnly = switch,false,tag=Dynamic MostVisitedLiveOnly
+Dynamic.AdCard = switch,true,tag=Dynamic AdCard
+View.AD = switch,true,tag=View AD
+DM.Command = switch,false,tag=DM Command
+DM.Colorful = switch,false,tag=DM Colorful
+Reply.AD = switch,true,tag=Reply AD
+LogLevel = input,"WARN",tag=LogLevel
+
+[Rewrite]
+# 移除搜尋中的預設關鍵詞
+request if ${url} ~= /^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.interface\.v1\.Search\/DefaultWords$/ then reject(404)
+# 阻擋影片播放暫停回報
+request if ${url} ~= /^https:\/\/(?:app\.bilibili\.com|grpc\.biliapi\.net)\/bilibili\.app\.(view|viewunite)\.v1\.View\/PlayPause$/ then reject(404)
+
+# 移除搜尋中的大家都在搜尋
+response if ${url} ~= /^https?:\/\/api\.vc\.bilibili\.com\/search_svr\/v\d\/Search\/recommend_words/ then response.body.mock("json", `{}`, 200)
+# 移除動態中的話題
+response if ${url} ~= /^https?:\/\/api\.vc\.bilibili\.com\/topic_svr\/v1\/topic_svr/ then response.body.mock("json", `{}`, 200)
+# 移除動態中的最常瀏覽
+response if ${url} ~= /^https?:\/\/api\.vc\.bilibili\.com\/dynamic_svr\/v1\/dynamic_svr\/mix_uplist/ then response.body.mock("json", `{}`, 200)
+# Bilibili 漫畫廣告移除
+response if ${url} ~= /^https?:\/\/manga\.bilibili\.com\/twirp\/comic\.v\d\.Comic\/Flash/ then response.body.mock("json", `{}`, 200)
+response if ${url} ~= /^https?:\/\/manga\.bilibili\.com\/twirp\/comic\.v\d\.Comic\/ListFlash/ then response.body.mock("json", `{}`, 200)
+response if ${url} ~= /^https?:\/\/api\.live\.bilibili\.com\/xlive\/e-commerce-interface\/v1\/ecommerce-user\/get_shopping_info\?/ then response.body.mock("json", `{}`, 200)
+# 番劇頁可能彈出的 HTML 廣告
+response if ${url} ~= /^https:\/\/api\.bilibili\.com\/pgc\/activity\/deliver\/material\/receive\?/ then response.body.mock("json", `{"code":0,"data":{"closeType":"close_win","container":[],"showTime":""},"message":"success"}`, 200)
+
+# iPad 端番劇推薦列表上方廣告
+response if ${url} ~= /^https:\/\/api\.bilibili\.com\/pgc\/view\/v2\/app\/season\?/ then response.json.delete("data.payment")
+
+
+[Script]
+http-response ^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.viewunite\.v1\.View\/AIRelateAsync(?:\?.*)?$ script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Bilibili/bilibili.viewunite.response.js?v=20261017-2,tag=BiliBili.ADBlock.view.air-relate.response.local,requires-body=true,binary-body-mode=true,timeout=10,argument=[{View.AD},{LogLevel}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/resource\/show\/tab\/v2\? script-path=https://github.com/BiliUniverse/Enhanced/releases/download/v0.5.13/response.bundle.js,tag=BiliBili.Enhanced.x.resource.show.tab.v2,requires-body=true,timeout=30,argument=[{Home.Switch},{Home.Tab},{Home.Tab_default},{Home.Top_left},{Home.Top},{Bottom},{Region.Switch},{Mine.Switch},{Mine.iPad.Switch},{Storage},{LogLevel}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/v2\/account\/mine(\/ipad)?\? script-path=https://github.com/BiliUniverse/Enhanced/releases/download/v0.5.13/response.bundle.js,tag=BiliBili.Enhanced.x.v2.account.mine,requires-body=true,timeout=30,argument=[{Home.Switch},{Home.Tab},{Home.Tab_default},{Home.Top_left},{Home.Top},{Bottom},{Region.Switch},{Mine.Switch},{Mine.iPad.Switch},{Storage},{LogLevel}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/v2\/region\/index\? script-path=https://github.com/BiliUniverse/Enhanced/releases/download/v0.5.13/response.bundle.js,tag=BiliBili.Enhanced.x.v2.region.index,requires-body=true,timeout=30,argument=[{Home.Switch},{Home.Tab},{Home.Tab_default},{Home.Top_left},{Home.Top},{Bottom},{Region.Switch},{Mine.Switch},{Mine.iPad.Switch},{Storage},{LogLevel}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/v2\/channel\/region\/list\? script-path=https://github.com/BiliUniverse/Enhanced/releases/download/v0.5.13/response.bundle.js,tag=BiliBili.Enhanced.x.v2.channel.region.list,requires-body=true,timeout=30,argument=[{Home.Switch},{Home.Tab},{Home.Tab_default},{Home.Top_left},{Home.Top},{Bottom},{Region.Switch},{Mine.Switch},{Mine.iPad.Switch},{Storage},{LogLevel}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/v2\/feed\/index(?:\?|$) script-path=https://raw.githubusercontent.com/kewachan/Loon/main/Rewrite/Bilibili/bilibili.feed.response.js,tag=BiliBili.ADBlock.feed.index.response.local,requires-body=true,timeout=30,argument=[{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList}]
+http-response ^https?:\/\/app\.bili(bili\.com|api\.net)\/x\/v2\/(splash\/(brand\/list|event\/list2|list|show)|feed\/index\/story|search\/square) script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.app.response.json,requires-body=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/api\.bilibili\.com\/x\/web-interface\/wbi\/index\/top\/feed\/rcmd\? script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.web.feed.response.json,requires-body=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/api\.bili(bili\.com|api\.net)\/pgc\/page\/(bangumi|cinema\/tab\?) script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.pgc.page.response.json,requires-body=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/api\.live\.bilibili\.com\/xlive\/app-room\/v1\/index\/getInfoByRoom script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.app-room.response.json,requires-body=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.(view|viewunite)\.v1\.View\/(View|TFInfo|RelatesFeed)$ script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.view.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.dynamic\.v2\.Dynamic\/Dyn(All|Video)$ script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.dynamic.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.playurl\.v1\.PlayURL\/PlayView$ script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.playurl.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https?:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.polymer\.app\.search\.v1\.Search\/SearchAll$ script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.search.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.community\.service\.dm\.v1\.DM\/(DmView|DmSegMobile) script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.dm.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.app\.interface\.v1\.Teenagers\/ModeStatus script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.interface.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.reply.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+http-response ^https:\/\/(grpc|app)\.bili(bili\.com|api\.net)\/bilibili\.pgc\.gateway\.player\.v2\.PlayURL\/PlayView$ script-path=https://github.com/BiliUniverse/ADBlock/releases/download/v0.6.24/response.bundle.js,tag=BiliBili.ADBlock.pgc.response.grpc,requires-body=true,binary-body-mode=true,timeout=30,argument=[{Splash},{Feed.AD},{Feed.Activity},{Feed.Vertical},{Feed.BlockUpLiveList},{Feed.Story},{Search.AD},{Search.HotSearch},{PGC.AD},{Xlive.AD},{Dynamic.HotTopics},{Dynamic.MostVisited},{Dynamic.MostVisitedLiveOnly},{Dynamic.AdCard},{View.AD},{DM.Command},{DM.Colorful},{Reply.AD},{LogLevel}]
+
+[Mitm]
+hostname = manga.bilibili.com, api.live.bilibili.com, api.vc.bilibili.com, app.bilibili.com, app.biliapi.net, api.bilibili.com, api.biliapi.net, grpc.biliapi.net

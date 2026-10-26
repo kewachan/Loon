@@ -1,0 +1,37 @@
+############ International ############
+
+#Recaptcha
+DOMAIN-SUFFIX, recaptcha.net
+
+#Apple Messages
+DOMAIN, push.apple.com
+DOMAIN, ess.apple.com
+
+#Pokemon TCGP
+DOMAIN-KEYWORD, player-api-prod
+
+#Youtube subtitle service
+URL-REGEX,^https:\/\/www.youtube.com\/api\/timedtext+
+
+#Lrclib
+DOMAIN-KEYWORD, lrclib
+
+############ China ############
+
+#HengQin car registration
+DOMAIN-SUFFIX, hengqin.gov.cn
+
+#Macao2North car registration
+DOMAIN-SUFFIX, dcloud.net.cn
+DOMAIN-SUFFIX, singlewindow.gd.cn
+
+############ Macau ############
+
+#BNU
+DOMAIN-SUFFIX, bnu.com.mo
+
+#SSH
+DOMAIN, freco.synology.me
+DOMAIN, kenichi-mac.asuscomm.com
+DOMAIN, kenichi-tyo1.duckdns.org
+DOMAIN, kenichi-tyo2.duckdns.org

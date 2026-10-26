@@ -1,0 +1,15 @@
+#!name=Node Offline Monitor
+#!desc=Checks Loon nodes and notifies after confirmed outages or recoveries.
+#!loon_version=3.5.1(988)
+
+[Argument]
+cronexp = input,"*/15 * * * *",tag=Check Schedule,desc=Cron schedule for checking nodes. Default is every 15 minutes.
+test_url = input,"auto",tag=Test URL,desc=Use auto for the default connectivity-check URL.
+maintenance_enabled = switch,true,tag=Quiet Window,desc=Pause notifications and state changes during maintenance.
+maintenance_start = input,"04:25",tag=Quiet Window Start,desc=Start time in HH:mm format.
+maintenance_end_time = input,"05:15",tag=Quiet Window End,desc=End time in HH:mm format.
+maintenance_utc_offset = input,8,type=number,tag=UTC Offset,desc=UTC offset used by the quiet window.
+
+[Script]
+generic then script("https://raw.githubusercontent.com/kewachan/Loon/main/Tools/NodeOfflineMonitor/node-offline-monitor.js", {${test_url}, ${maintenance_enabled}, ${maintenance_start}, ${maintenance_end_time}, ${maintenance_utc_offset}}) with tag="Node Offline Monitor", img_url="network.badge.shield.half.filled.system", timeout=180
+cron ${cronexp} then script("https://raw.githubusercontent.com/kewachan/Loon/main/Tools/NodeOfflineMonitor/node-offline-monitor.js", {${test_url}, ${maintenance_enabled}, ${maintenance_start}, ${maintenance_end_time}, ${maintenance_utc_offset}}) with tag="Node Offline Monitor Scheduled", timeout=180
